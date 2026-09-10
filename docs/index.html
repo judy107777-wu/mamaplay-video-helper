@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#F08A24">
+<title>媽媽Play 影片小幫手</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --orange:#F08A24; --orange-dark:#D97415; --orange-bg:rgba(240,138,36,.12);
+  --ink:#333; --muted:#8a8a8a; --line:#e8e2da; --bg:#faf7f3; --card:#fff;
+  --radius:14px;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+  font-family:"Noto Sans TC",system-ui,-apple-system,sans-serif;
+  overscroll-behavior:none;height:100%;}
+body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;
+  padding-bottom:env(safe-area-inset-bottom);}
+button{font-family:inherit;}
+
+/* ── 頂欄 ── */
+header{flex:none;display:flex;align-items:center;gap:8px;padding:6px 14px 2px;}
+header h1{font-size:15px;margin:0;font-weight:900;color:var(--orange-dark);flex:1;}
+#btnSettings{border:none;background:none;font-size:20px;padding:2px 6px;color:var(--muted);}
+
+/* ── 凍結的上半部：步驟直列＋影片＋時間軸＋操作鈕 ── */
+#topArea{flex:none;background:var(--bg);border-bottom:2px solid var(--line);
+  box-shadow:0 4px 10px -6px rgba(0,0,0,.12);padding:0 10px 6px;}
+#topRow{display:flex;gap:8px;align-items:stretch;}
+#steps{display:flex;flex-direction:column;gap:6px;width:84px;flex:none;justify-content:center;}
+.step{text-align:center;font-size:13px;font-weight:700;color:var(--muted);
+  padding:10px 0;border-radius:12px;background:#efe9e2;border:none;}
+.step.on{background:var(--orange);color:#fff;}
+.step:disabled{opacity:.45;}
+#stageArea{flex:1;display:flex;justify-content:flex-end;padding-right:4px;}
+#stage{position:relative;background:#000;overflow:hidden;
+  height:min(31vh,250px);aspect-ratio:9/16;border-radius:10px;}
+#zoomWrap{position:absolute;inset:0;will-change:transform;transform-origin:0 0;}
+#vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;}
+#titleOverlay{position:absolute;left:50%;transform:translate(-50%,-50%);
+  pointer-events:none;max-width:92%;}
+#titleOverlay img{width:100%;display:block;}
+#logoOverlay{position:absolute;right:11%;bottom:3.2%;width:19%;pointer-events:none;}
+.blurBox{position:absolute;border:2px dashed rgba(255,255,255,.9);border-radius:8px;
+  backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
+  background:rgba(255,255,255,.06);touch-action:none;}
+.blurBox.sel{border-color:var(--orange);border-style:solid;}
+.blurBox .hd{position:absolute;right:-11px;bottom:-11px;width:26px;height:26px;border-radius:50%;
+  background:var(--orange);border:2px solid #fff;touch-action:none;}
+.blurBox .tag{position:absolute;left:0;top:-20px;font-size:11px;color:#fff;
+  background:rgba(0,0,0,.5);padding:1px 6px;border-radius:6px;white-space:nowrap;}
+#emptyStage{position:absolute;inset:0;display:flex;flex-direction:column;gap:10px;
+  align-items:center;justify-content:center;color:#bbb;font-size:14px;}
+
+/* ── 面板（獨立捲動） ── */
+#panel{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 14px 40px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:12px;margin-bottom:10px;}
+.card h3{margin:0 0 8px;font-size:14px;color:var(--orange-dark);font-weight:900;}
+.hint{font-size:12px;color:var(--muted);margin:4px 0 0;}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+
+.btn{border:none;border-radius:12px;padding:11px 16px;font-size:15px;font-weight:700;
+  background:#efe9e2;color:var(--ink);}
+.btn.pri{background:var(--orange);color:#fff;}
+.btn.big{width:100%;padding:15px;font-size:17px;}
+.btn.warn{background:#fbe9e7;color:#c62828;}
+.btn.sm{padding:7px 12px;font-size:13px;border-radius:10px;}
+.btn:disabled{opacity:.4;}
+
+.chip{border:1.5px solid var(--line);background:#fff;border-radius:999px;
+  padding:7px 14px;font-size:14px;font-weight:700;color:var(--ink);}
+.chip.on{background:var(--orange);border-color:var(--orange);color:#fff;}
+
+input[type=text],textarea{width:100%;border:1.5px solid var(--line);border-radius:10px;
+  padding:10px;font-size:15px;font-family:inherit;background:#fff;color:var(--ink);}
+textarea{resize:vertical;}
+input:focus,textarea:focus{outline:2px solid var(--orange);border-color:transparent;}
+
+/* 時間軸 */
+#tlCard{margin-top:6px;}
+#thumbs{display:flex;height:28px;border-radius:6px;overflow:hidden;background:#222;}
+#thumbs img{height:100%;flex:1;object-fit:cover;min-width:0;}
+#tlWrap{position:relative;margin-top:4px;}
+#segBar{position:relative;height:12px;background:#eee2d4;border-radius:6px;overflow:hidden;}
+.segSpan{position:absolute;top:0;bottom:0;background:var(--orange);opacity:.85;}
+.segSpan.cur{outline:2px solid var(--orange-dark);}
+#scrub{width:100%;margin:2px 0 0;accent-color:var(--orange-dark);}
+#tcur{font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;color:var(--orange-dark);}
+
+.segRow{display:flex;align-items:center;gap:6px;padding:8px 0;border-top:1px dashed var(--line);
+  flex-wrap:wrap;}
+.segRow:first-child{border-top:none;}
+.segRow .tm{font-variant-numeric:tabular-nums;font-size:13.5px;font-weight:700;min-width:96px;}
+.segRow.cur .tm{color:var(--orange-dark);}
+.spd{display:flex;gap:4px;}
+.spd .chip{padding:5px 9px;font-size:12.5px;}
+.x{border:none;background:none;color:#c62828;font-size:18px;padding:2px 6px;margin-left:auto;}
+
+/* 進度 */
+#prog{height:14px;border-radius:7px;background:#eee2d4;overflow:hidden;display:none;}
+#progIn{height:100%;width:0%;background:var(--orange);transition:width .2s;}
+#progTxt{font-size:13px;color:var(--muted);margin-top:6px;text-align:center;}
+
+/* 完成畫面 */
+#doneCard{display:none;}
+#copyBox{white-space:pre-wrap;font-size:14px;background:#fff;border:1.5px solid var(--line);
+  border-radius:10px;padding:10px;max-height:170px;overflow:auto;}
+.linkGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
+
+/* 彈窗 */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;display:none;
+  align-items:flex-end;justify-content:center;}
+.modal.show{display:flex;}
+.sheet{background:var(--bg);width:100%;max-width:520px;border-radius:18px 18px 0 0;
+  padding:16px 16px calc(20px + env(safe-area-inset-bottom));max-height:82vh;overflow:auto;}
+.sheet h2{margin:0 0 10px;font-size:16px;color:var(--orange-dark);}
+.mgRow{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line);}
+.mgRow span{flex:1;font-size:15px;}
+
+.toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);z-index:60;
+  background:rgba(40,40,40,.92);color:#fff;font-size:14px;padding:9px 18px;border-radius:999px;
+  opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+.screen{display:none;}
+.screen.on{display:block;}
+</style>
+</head>
+<body>
+<header>
+  <h1>媽媽Play 影片小幫手</h1>
+  <button id="btnSettings" aria-label="設定">⚙</button>
+</header>
+
+<div id="topArea">
+  <div id="topRow">
+    <div id="steps">
+      <button class="step on" data-s="cut">1 剪輯</button>
+      <button class="step" data-s="title" disabled>2 標題</button>
+      <button class="step" data-s="out" disabled>3 輸出</button>
+    </div>
+    <div id="stageArea">
+      <div id="stage">
+        <div id="zoomWrap">
+          <video id="vid" playsinline muted preload="auto"></video>
+          <div id="blurLayer"></div>
+        </div>
+        <div id="titleOverlay"><img id="titleImg" alt=""></div>
+        <img id="logoOverlay" alt="" style="display:none">
+        <div id="emptyStage">
+          <div style="font-size:34px">🎬</div>
+          <div>尚未選擇影片</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tlCard" style="display:none">
+    <div id="thumbs"></div>
+    <div id="tlWrap">
+      <div id="segBar"></div>
+      <input type="range" id="scrub" min="0" max="100" step="0.05" value="0">
+    </div>
+    <div class="row" style="justify-content:space-between;flex-wrap:nowrap;gap:4px;margin-top:2px">
+      <button class="btn sm" id="btnRepick" style="white-space:nowrap;line-height:1.2">↻ 更換<br><small style="font-weight:400">9:16最佳</small></button>
+      <span id="tcur">0.0s</span>
+      <button class="btn sm" id="btnPlay" style="white-space:nowrap">▶ 播放</button>
+      <button class="btn sm" id="btnPrevSeg" style="white-space:nowrap">▶ 預覽</button>
+    </div>
+  </div>
+</div>
+
+<div id="panel">
+
+<!-- ═══ 畫面 1：剪輯 ═══ -->
+<section class="screen on" id="sc-cut">
+  <div class="card" id="pickCard">
+    <button class="btn pri big" id="btnPick">＋ 選擇影片</button>
+    <input type="file" id="filePick" accept="video/*" hidden>
+    <p class="hint">9:16 直式最佳</p>
+  </div>
+
+  <div class="card" id="segCard" style="display:none">
+    <h3>保留片段（可跳選多段，依序接成一支）</h3>
+    <div id="segList"></div>
+    <div class="row" style="margin-top:8px;flex-wrap:nowrap;gap:6px">
+      <button class="btn pri" id="btnAddSeg" style="flex:1.1;white-space:nowrap;padding:11px 4px;font-size:14px">＋新增片段</button>
+      <button class="btn" id="btnSetIn" style="flex:1;white-space:nowrap;padding:11px 4px;font-size:14px">［設起點</button>
+      <button class="btn" id="btnSetOut" style="flex:1;white-space:nowrap;padding:11px 4px;font-size:14px">設終點］</button>
+    </div>
+    <p class="hint">先拖時間軸到想要的位置，再按「設起點／設終點」。每段可各選加速倍率。</p>
+  </div>
+
+  <div class="card" id="fxCard" style="display:none">
+    <h3>色彩與姓名遮蔽</h3>
+    <div class="row">
+      <button class="chip on" id="chipColor">☀ 明亮微暖（建議）</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" id="btnAddBlur">＋ 新增模糊框</button>
+      <button class="btn sm" id="btnBlurFrom" disabled>從此刻開始</button>
+      <button class="btn sm" id="btnBlurTo" disabled>到此刻結束</button>
+      <button class="btn sm warn" id="btnDelBlur" disabled>刪除框</button>
+    </div>
+    <div class="row" style="margin-top:8px;flex-wrap:nowrap;gap:4px" id="fineRow" hidden>
+      <button class="btn sm" id="btnZoomEdit" style="white-space:nowrap;padding:7px 8px">🔍 放大</button>
+      <button class="btn sm nud" data-n="l" style="padding:7px 9px">◀</button>
+      <button class="btn sm nud" data-n="u" style="padding:7px 9px">▲</button>
+      <button class="btn sm nud" data-n="d" style="padding:7px 9px">▼</button>
+      <button class="btn sm nud" data-n="r" style="padding:7px 9px">▶</button>
+      <button class="btn sm nud" data-n="big" style="padding:7px 9px">＋</button>
+      <button class="btn sm nud" data-n="small" style="padding:7px 9px">－</button>
+    </div>
+    <p class="hint">出現姓名時：暫停 → 新增模糊框 → 拖到姓名上（可按「區域放大」放大畫面微調，箭頭鈕可微移、＋－調大小）。追蹤訣竅：姓名移動的每個轉折點都停格，把框拖到新位置，中間會自動接順。</p>
+  </div>
+
+  <div class="card" id="nextCutCard" style="display:none">
+    <button class="btn pri big" id="btnToTitle">下一步：標題 →</button>
+  </div>
+</section>
+
+<!-- ═══ 畫面 2：標題 ═══ -->
+<section class="screen" id="sc-title">
+  <div class="card">
+    <h3>活動分類</h3>
+    <div class="row" id="catChips"></div>
+  </div>
+  <div class="card">
+    <h3>分類標語（標題下方的藍綠色小框）</h3>
+    <div class="row" id="pillChips"></div>
+    <input type="text" id="inpPill" placeholder="小框文字，可自行修改" style="margin-top:6px">
+  </div>
+  <div class="card">
+    <h3>活動內容</h3>
+    <input type="text" id="inpContent" placeholder="例：咖哩蛋包飯">
+    <div class="row" id="recentContents" style="margin-top:6px"></div>
+  </div>
+  <div class="card">
+    <h3>主標題（橘框，1–2 行，可加表情符號）</h3>
+    <textarea id="inpTitle" rows="2" placeholder="會自動帶入活動內容，可自由修改、加一行引言"></textarea>
+    <div class="row" id="recentTitles" style="margin-top:6px"></div>
+  </div>
+  <div class="card">
+    <h3>標題位置</h3>
+    <div class="row">
+      <button class="chip on" data-pos="top">上 1/3</button>
+      <button class="chip" data-pos="mid">置中</button>
+      <button class="chip" data-pos="bot">下 1/3</button>
+    </div>
+  </div>
+  <div class="card">
+    <button class="btn pri big" id="btnToOut">下一步：輸出 →</button>
+  </div>
+</section>
+
+<!-- ═══ 畫面 3：輸出 ═══ -->
+<section class="screen" id="sc-out">
+  <div class="card" id="nameCard">
+    <h3>檔名</h3>
+    <div class="row">
+      <label style="font-size:13px">日期
+        <input type="text" id="inpDate" style="width:110px" inputmode="numeric"></label>
+      <label style="font-size:13px">流水號
+        <input type="text" id="inpSerial" style="width:64px" inputmode="numeric"></label>
+    </div>
+    <p class="hint" id="fnPreview"></p>
+  </div>
+  <div class="card" id="goCard">
+    <button class="btn pri big" id="btnExport">🎬 開始輸出影片</button>
+    <div id="prog" style="margin-top:10px"><div id="progIn"></div></div>
+    <p id="progTxt"></p>
+  </div>
+  <div class="card" id="doneCard">
+    <h3>✅ 影片處理完成</h3>
+    <button class="btn pri big" id="btnSaveVid">⬇ 下載影片到手機</button>
+    <p class="hint">按下後到通知列或「下載」資料夾確認；沒看到檔案就再按一次。</p>
+    <div id="copyBox" style="margin-top:8px"></div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn pri" id="btnCopy">📋 複製文案</button>
+      <button class="btn pri" id="btnShare">📤 分享影片（選 FB / IG）</button>
+    </div>
+    <div class="linkGrid">
+      <a class="btn" style="text-align:center;text-decoration:none" href="https://www.facebook.com" target="_blank">開啟 FB</a>
+      <a class="btn" style="text-align:center;text-decoration:none" href="https://www.instagram.com" target="_blank">開啟 IG</a>
+      <a class="btn" style="text-align:center;text-decoration:none" href="https://photos.google.com" target="_blank">開啟 Google 相簿</a>
+      <a class="btn" style="text-align:center;text-decoration:none" id="lnkDrive" href="https://drive.google.com" target="_blank">開啟 Drive 資料夾</a>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn big" id="btnAgain">✨ 做下一支影片</button>
+    </div>
+  </div>
+</section>
+</div>
+
+<!-- ═══ 設定 ═══ -->
+<div class="modal" id="mSettings">
+  <div class="sheet">
+    <h2>設定</h2>
+    <div class="card">
+      <h3>活動分類清單</h3>
+      <div id="catManage"></div>
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="inpNewCat" placeholder="新增分類名稱" style="flex:1">
+        <button class="btn sm pri" id="btnAddCat">新增</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>各分類的標語清單（一行一句，第一句為預設）</h3>
+      <div id="pillManage"></div>
+    </div>
+    <div class="card">
+      <h3>Hashtag 文案模板（{活動名稱} 會自動代入）</h3>
+      <textarea id="inpTags" rows="4"></textarea>
+    </div>
+    <div class="card">
+      <h3>Logo 浮水印（去背 PNG）</h3>
+      <div class="row">
+        <button class="btn sm" id="btnLogoPick">選擇 Logo 圖檔</button>
+        <input type="file" id="logoPick" accept="image/png,image/webp" hidden>
+        <img id="logoPrev" style="height:36px;display:none">
+        <button class="btn sm warn" id="btnLogoDel" style="display:none">移除</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Google Drive 完成影片資料夾連結</h3>
+      <input type="text" id="inpDrive" placeholder="貼上資料夾網址">
+    </div>
+    <div class="row" style="margin-top:4px">
+      <button class="btn pri big" id="btnCloseSettings">儲存並關閉</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";var Mp4Muxer=(()=>{var we=Object.defineProperty,at=Object.getOwnPropertyDescriptor,nt=Object.getOwnPropertyNames,ot=Object.prototype.hasOwnProperty,ht=(e,t)=>{for(var s in t)we(e,s,{get:t[s],enumerable:!0})},lt=(e,t,s,r)=>{if(t&&typeof t=="object"||typeof t=="function")for(let a of nt(t))!ot.call(e,a)&&a!==s&&we(e,a,{get:()=>t[a],enumerable:!(r=at(t,a))||r.enumerable});return e},ft=e=>lt(we({},"__esModule",{value:!0}),e),ve=(e,t,s)=>{if(!t.has(e))throw TypeError("Cannot "+s)},i=(e,t,s)=>(ve(e,t,"read from private field"),s?s.call(e):t.get(e)),d=(e,t,s)=>{if(t.has(e))throw TypeError("Cannot add the same private member more than once");t instanceof WeakSet?t.add(e):t.set(e,s)},C=(e,t,s,r)=>(ve(e,t,"write to private field"),r?r.call(e,s):t.set(e,s),s),ut=(e,t,s,r)=>({set _(a){C(e,t,a,s)},get _(){return i(e,t,r)}}),m=(e,t,s)=>(ve(e,t,"access private method"),s),Re={};ht(Re,{ArrayBufferTarget:()=>qe,FileSystemWritableFileStreamTarget:()=>Xe,Muxer:()=>vi,StreamTarget:()=>Te});var p=new Uint8Array(8),z=new DataView(p.buffer),y=e=>[(e%256+256)%256],c=e=>(z.setUint16(0,e,!1),[p[0],p[1]]),dt=e=>(z.setInt16(0,e,!1),[p[0],p[1]]),Pe=e=>(z.setUint32(0,e,!1),[p[1],p[2],p[3]]),n=e=>(z.setUint32(0,e,!1),[p[0],p[1],p[2],p[3]]),mt=e=>(z.setInt32(0,e,!1),[p[0],p[1],p[2],p[3]]),x=e=>(z.setUint32(0,Math.floor(e/2**32),!1),z.setUint32(4,e,!1),[p[0],p[1],p[2],p[3],p[4],p[5],p[6],p[7]]),ge=e=>(z.setInt16(0,2**8*e,!1),[p[0],p[1]]),A=e=>(z.setInt32(0,2**16*e,!1),[p[0],p[1],p[2],p[3]]),ye=e=>(z.setInt32(0,2**30*e,!1),[p[0],p[1],p[2],p[3]]),E=(e,t=!1)=>{let s=Array(e.length).fill(null).map((r,a)=>e.charCodeAt(a));return t&&s.push(0),s},se=e=>e&&e[e.length-1],Ce=e=>{let t;for(let s of e)(!t||s.presentationTimestamp>t.presentationTimestamp)&&(t=s);return t},O=(e,t,s=!0)=>{let r=e*t;return s?Math.round(r):r},Le=e=>{let t=e*(Math.PI/180),s=Math.cos(t),r=Math.sin(t);return[s,r,0,-r,s,0,0,0,1]},Ve=Le(0),je=e=>[A(e[0]),A(e[1]),ye(e[2]),A(e[3]),A(e[4]),ye(e[5]),A(e[6]),A(e[7]),ye(e[8])],X=e=>!e||typeof e!="object"?e:Array.isArray(e)?e.map(X):Object.fromEntries(Object.entries(e).map(([t,s])=>[t,X(s)])),V=e=>e>=0&&e<2**32,v=(e,t,s)=>({type:e,contents:t&&new Uint8Array(t.flat(10)),children:s}),w=(e,t,s,r,a)=>v(e,[y(t),Pe(s),r??[]],a),pt=e=>{let t=512;return e.fragmented?v("ftyp",[E("iso5"),n(t),E("iso5"),E("iso6"),E("mp41")]):v("ftyp",[E("isom"),n(t),E("isom"),e.holdsAvc?E("avc1"):[],E("mp41")])},Se=e=>({type:"mdat",largeSize:e}),ct=e=>({type:"free",size:e}),re=(e,t,s=!1)=>v("moov",null,[wt(t,e),...e.map(r=>vt(r,t)),s?Gt(e):null]),wt=(e,t)=>{let s=O(Math.max(0,...t.filter(l=>l.samples.length>0).map(l=>{const u=Ce(l.samples);return u.presentationTimestamp+u.duration})),Ae),r=Math.max(...t.map(l=>l.id))+1,a=!V(e)||!V(s),o=a?x:n;return w("mvhd",+a,0,[o(e),o(e),n(Ae),o(s),A(1),ge(1),Array(10).fill(0),je(Ve),Array(24).fill(0),n(r)])},vt=(e,t)=>v("trak",null,[gt(e,t),yt(e,t)]),gt=(e,t)=>{let s=Ce(e.samples),r=O(s?s.presentationTimestamp+s.duration:0,Ae),a=!V(t)||!V(r),o=a?x:n,l;return e.info.type==="video"?l=typeof e.info.rotation=="number"?Le(e.info.rotation):e.info.rotation:l=Ve,w("tkhd",+a,3,[o(t),o(t),n(e.id),n(0),o(r),Array(8).fill(0),c(0),c(0),ge(e.info.type==="audio"?1:0),c(0),je(l),A(e.info.type==="video"?e.info.width:0),A(e.info.type==="video"?e.info.height:0)])},yt=(e,t)=>v("mdia",null,[Ct(e,t),St(e.info.type==="video"?"vide":"soun"),Tt(e)]),Ct=(e,t)=>{let s=Ce(e.samples),r=O(s?s.presentationTimestamp+s.duration:0,e.timescale),a=!V(t)||!V(r),o=a?x:n;return w("mdhd",+a,0,[o(t),o(t),n(e.timescale),o(r),c(21956),c(0)])},St=e=>w("hdlr",0,0,[E("mhlr"),E(e),n(0),n(0),n(0),E("mp4-muxer-hdlr",!0)]),Tt=e=>v("minf",null,[e.info.type==="video"?bt():_t(),kt(),At(e)]),bt=()=>w("vmhd",0,1,[c(0),c(0),c(0),c(0)]),_t=()=>w("smhd",0,0,[c(0),c(0)]),kt=()=>v("dinf",null,[Et()]),Et=()=>w("dref",0,0,[n(1)],[zt()]),zt=()=>w("url ",0,1),At=e=>{const t=e.compositionTimeOffsetTable.length>1||e.compositionTimeOffsetTable.some(s=>s.sampleCompositionTimeOffset!==0);return v("stbl",null,[Ot(e),Vt(e),jt(e),$t(e),Ht(e),qt(e),t?Xt(e):null])},Ot=e=>w("stsd",0,0,[n(1)],[e.info.type==="video"?Mt(ri[e.info.codec],e):Rt(ni[e.info.codec],e)]),Mt=(e,t)=>v(e,[Array(6).fill(0),c(1),c(0),c(0),Array(12).fill(0),c(t.info.width),c(t.info.height),n(4718592),n(4718592),n(0),c(1),Array(32).fill(0),c(24),dt(65535)],[ai[t.info.codec](t),t.info.decoderConfig.colorSpace?Ut(t):null]),Bt={bt709:1,bt470bg:5,smpte170m:6},It={bt709:1,smpte170m:6,"iec61966-2-1":13},Dt={rgb:0,bt709:1,bt470bg:5,smpte170m:6},Ut=e=>v("colr",[E("nclx"),c(Bt[e.info.decoderConfig.colorSpace.primaries]),c(It[e.info.decoderConfig.colorSpace.transfer]),c(Dt[e.info.decoderConfig.colorSpace.matrix]),y((e.info.decoderConfig.colorSpace.fullRange?1:0)<<7)]),xt=e=>e.info.decoderConfig&&v("avcC",[...new Uint8Array(e.info.decoderConfig.description)]),Wt=e=>e.info.decoderConfig&&v("hvcC",[...new Uint8Array(e.info.decoderConfig.description)]),Ft=e=>{if(!e.info.decoderConfig)return null;let t=e.info.decoderConfig;if(!t.colorSpace)throw new Error("'colorSpace' is required in the decoder config for VP9.");let s=t.codec.split("."),r=Number(s[1]),a=Number(s[2]),u=(Number(s[3])<<4)+(0<<1)+Number(t.colorSpace.fullRange);return w("vpcC",1,0,[y(r),y(a),y(u),y(2),y(2),y(2),c(0)])},Nt=()=>{let s=(1<<7)+1;return v("av1C",[s,0,0,0])},Rt=(e,t)=>v(e,[Array(6).fill(0),c(1),c(0),c(0),n(0),c(t.info.numberOfChannels),c(16),c(0),c(0),A(t.info.sampleRate)],[oi[t.info.codec](t)]),Pt=e=>{let t=new Uint8Array(e.info.decoderConfig.description);return w("esds",0,0,[n(58753152),y(32+t.byteLength),c(1),y(0),n(75530368),y(18+t.byteLength),y(64),y(21),Pe(0),n(130071),n(130071),n(92307584),y(t.byteLength),...t,n(109084800),y(1),y(2)])},Lt=e=>{let t=3840,s=0;const r=e.info.decoderConfig?.description;if(r){if(r.byteLength<18)throw new TypeError("Invalid decoder description provided for Opus; must be at least 18 bytes long.");const a=ArrayBuffer.isView(r)?new DataView(r.buffer,r.byteOffset,r.byteLength):new DataView(r);t=a.getUint16(10,!0),s=a.getInt16(14,!0)}return v("dOps",[y(0),y(e.info.numberOfChannels),c(t),n(e.info.sampleRate),ge(s),y(0)])},Vt=e=>w("stts",0,0,[n(e.timeToSampleTable.length),e.timeToSampleTable.map(t=>[n(t.sampleCount),n(t.sampleDelta)])]),jt=e=>{if(e.samples.every(s=>s.type==="key"))return null;let t=[...e.samples.entries()].filter(([,s])=>s.type==="key");return w("stss",0,0,[n(t.length),t.map(([s])=>n(s+1))])},$t=e=>w("stsc",0,0,[n(e.compactlyCodedChunkTable.length),e.compactlyCodedChunkTable.map(t=>[n(t.firstChunk),n(t.samplesPerChunk),n(1)])]),Ht=e=>w("stsz",0,0,[n(0),n(e.samples.length),e.samples.map(t=>n(t.size))]),qt=e=>e.finalizedChunks.length>0&&se(e.finalizedChunks).offset>=2**32?w("co64",0,0,[n(e.finalizedChunks.length),e.finalizedChunks.map(t=>x(t.offset))]):w("stco",0,0,[n(e.finalizedChunks.length),e.finalizedChunks.map(t=>n(t.offset))]),Xt=e=>w("ctts",0,0,[n(e.compositionTimeOffsetTable.length),e.compositionTimeOffsetTable.map(t=>[n(t.sampleCount),n(t.sampleCompositionTimeOffset)])]),Gt=e=>v("mvex",null,e.map(Zt)),Zt=e=>w("trex",0,0,[n(e.id),n(1),n(0),n(0),n(0)]),$e=(e,t)=>v("moof",null,[Kt(e),...t.map(Qt)]),Kt=e=>w("mfhd",0,0,[n(e)]),He=e=>{let t=0,s=0,r=0,a=0,o=e.type==="delta";return s|=+o,o?t|=1:t|=2,t<<24|s<<16|r<<8|a},Qt=e=>v("traf",null,[Jt(e),Yt(e),ei(e)]),Jt=e=>{let t=0;t|=8,t|=16,t|=32,t|=131072;let s=e.currentChunk.samples[1]??e.currentChunk.samples[0],r={duration:s.timescaleUnitsToNextSample,size:s.size,flags:He(s)};return w("tfhd",0,t,[n(e.id),n(r.duration),n(r.size),n(r.flags)])},Yt=e=>w("tfdt",1,0,[x(O(e.currentChunk.startTimestamp,e.timescale))]),ei=e=>{let t=e.currentChunk.samples.map(D=>D.timescaleUnitsToNextSample),s=e.currentChunk.samples.map(D=>D.size),r=e.currentChunk.samples.map(He),a=e.currentChunk.samples.map(D=>O(D.presentationTimestamp-D.decodeTimestamp,e.timescale)),o=new Set(t),l=new Set(s),u=new Set(r),g=new Set(a),b=u.size===2&&r[0]!==r[1],U=o.size>1,ie=l.size>1,st=!b&&u.size>1,rt=g.size>1||[...g].some(D=>D!==0),L=0;return L|=1,L|=4*+b,L|=256*+U,L|=512*+ie,L|=1024*+st,L|=2048*+rt,w("trun",1,L,[n(e.currentChunk.samples.length),n(e.currentChunk.offset-e.currentChunk.moofOffset||0),b?n(r[0]):[],e.currentChunk.samples.map((D,ce)=>[U?n(t[ce]):[],ie?n(s[ce]):[],st?n(r[ce]):[],rt?mt(a[ce]):[]])])},ti=e=>v("mfra",null,[...e.map(ii),si()]),ii=(e,t)=>w("tfra",1,0,[n(e.id),n(63),n(e.finalizedChunks.length),e.finalizedChunks.map(r=>[x(O(r.startTimestamp,e.timescale)),x(r.moofOffset),n(t+1),n(1),n(1)])]),si=()=>w("mfro",0,0,[n(0)]),ri={avc:"avc1",hevc:"hvc1",vp9:"vp09",av1:"av01"},ai={avc:xt,hevc:Wt,vp9:Ft,av1:Nt},ni={aac:"mp4a",opus:"Opus"},oi={aac:Pt,opus:Lt},hi=Symbol("isTarget"),ae=class{},qe=class extends ae{constructor(){super(...arguments),this.buffer=null}},Te=class extends ae{constructor(e){if(super(),this.options=e,typeof e!="object")throw new TypeError("StreamTarget requires an options object to be passed to its constructor.");if(e.onData){if(typeof e.onData!="function")throw new TypeError("options.onData, when provided, must be a function.");if(e.onData.length<2)throw new TypeError("options.onData, when provided, must be a function that takes in at least two arguments (data and position). Ignoring the position argument, which specifies the byte offset at which the data is to be written, can lead to broken outputs.")}if(e.chunked!==void 0&&typeof e.chunked!="boolean")throw new TypeError("options.chunked, when provided, must be a boolean.");if(e.chunkSize!==void 0&&(!Number.isInteger(e.chunkSize)||e.chunkSize<1024))throw new TypeError("options.chunkSize, when provided, must be an integer and not smaller than 1024.")}},Xe=class extends ae{constructor(e,t){if(super(),this.stream=e,this.options=t,!(e instanceof FileSystemWritableFileStream))throw new TypeError("FileSystemWritableFileStreamTarget requires a FileSystemWritableFileStream instance.");if(t!==void 0&&typeof t!="object")throw new TypeError("FileSystemWritableFileStreamTarget's options, when provided, must be an object.");if(t&&t.chunkSize!==void 0&&(!Number.isInteger(t.chunkSize)||t.chunkSize<=0))throw new TypeError("options.chunkSize, when provided, must be a positive integer")}},W,j,Ge=class{constructor(){this.pos=0,d(this,W,new Uint8Array(8)),d(this,j,new DataView(i(this,W).buffer)),this.offsets=new WeakMap}seek(e){this.pos=e}writeU32(e){i(this,j).setUint32(0,e,!1),this.write(i(this,W).subarray(0,4))}writeU64(e){i(this,j).setUint32(0,Math.floor(e/2**32),!1),i(this,j).setUint32(4,e,!1),this.write(i(this,W).subarray(0,8))}writeAscii(e){for(let t=0;t<e.length;t++)i(this,j).setUint8(t%8,e.charCodeAt(t)),t%8===7&&this.write(i(this,W));e.length%8!==0&&this.write(i(this,W).subarray(0,e.length%8))}writeBox(e){if(this.offsets.set(e,this.pos),e.contents&&!e.children)this.writeBoxHeader(e,e.size??e.contents.byteLength+8),this.write(e.contents);else{let t=this.pos;if(this.writeBoxHeader(e,0),e.contents&&this.write(e.contents),e.children)for(let a of e.children)a&&this.writeBox(a);let s=this.pos,r=e.size??s-t;this.seek(t),this.writeBoxHeader(e,r),this.seek(s)}}writeBoxHeader(e,t){this.writeU32(e.largeSize?1:t),this.writeAscii(e.type),e.largeSize&&this.writeU64(t)}measureBoxHeader(e){return 8+(e.largeSize?8:0)}patchBox(e){let t=this.pos;this.seek(this.offsets.get(e)),this.writeBox(e),this.seek(t)}measureBox(e){if(e.contents&&!e.children)return this.measureBoxHeader(e)+e.contents.byteLength;{let t=this.measureBoxHeader(e);if(e.contents&&(t+=e.contents.byteLength),e.children)for(let s of e.children)s&&(t+=this.measureBox(s));return t}}};W=new WeakMap,j=new WeakMap;var ne,F,G,Z,oe,be,li=class extends Ge{constructor(e){super(),d(this,oe),d(this,ne,void 0),d(this,F,new ArrayBuffer(2**16)),d(this,G,new Uint8Array(i(this,F))),d(this,Z,0),C(this,ne,e)}write(e){m(this,oe,be).call(this,this.pos+e.byteLength),i(this,G).set(e,this.pos),this.pos+=e.byteLength,C(this,Z,Math.max(i(this,Z),this.pos))}finalize(){m(this,oe,be).call(this,this.pos),i(this,ne).buffer=i(this,F).slice(0,Math.max(i(this,Z),this.pos))}};ne=new WeakMap,F=new WeakMap,G=new WeakMap,Z=new WeakMap,oe=new WeakSet,be=function(e){let t=i(this,F).byteLength;for(;t<e;)t*=2;if(t===i(this,F).byteLength)return;let s=new ArrayBuffer(t),r=new Uint8Array(s);r.set(i(this,G),0),C(this,F,s),C(this,G,r)};var fi=2**24,ui=2,K,N,Q,B,_,he,_e,ke,Ze,Ee,Ke,J,le,ze=class extends Ge{constructor(e){super(),d(this,he),d(this,ke),d(this,Ee),d(this,J),d(this,K,void 0),d(this,N,[]),d(this,Q,void 0),d(this,B,void 0),d(this,_,[]),C(this,K,e),C(this,Q,e.options?.chunked??!1),C(this,B,e.options?.chunkSize??fi)}write(e){i(this,N).push({data:e.slice(),start:this.pos}),this.pos+=e.byteLength}flush(){if(i(this,N).length===0)return;let e=[],t=[...i(this,N)].sort((s,r)=>s.start-r.start);e.push({start:t[0].start,size:t[0].data.byteLength});for(let s=1;s<t.length;s++){let r=e[e.length-1],a=t[s];a.start<=r.start+r.size?r.size=Math.max(r.size,a.start+a.data.byteLength-r.start):e.push({start:a.start,size:a.data.byteLength})}for(let s of e){s.data=new Uint8Array(s.size);for(let r of i(this,N))s.start<=r.start&&r.start<s.start+s.size&&s.data.set(r.data,r.start-s.start);i(this,Q)?(m(this,he,_e).call(this,s.data,s.start),m(this,J,le).call(this)):i(this,K).options.onData?.(s.data,s.start)}i(this,N).length=0}finalize(){i(this,Q)&&m(this,J,le).call(this,!0)}};K=new WeakMap,N=new WeakMap,Q=new WeakMap,B=new WeakMap,_=new WeakMap,he=new WeakSet,_e=function(e,t){let s=i(this,_).findIndex(u=>u.start<=t&&t<u.start+i(this,B));s===-1&&(s=m(this,Ee,Ke).call(this,t));let r=i(this,_)[s],a=t-r.start,o=e.subarray(0,Math.min(i(this,B)-a,e.byteLength));r.data.set(o,a);let l={start:a,end:a+o.byteLength};if(m(this,ke,Ze).call(this,r,l),r.written[0].start===0&&r.written[0].end===i(this,B)&&(r.shouldFlush=!0),i(this,_).length>ui){for(let u=0;u<i(this,_).length-1;u++)i(this,_)[u].shouldFlush=!0;m(this,J,le).call(this)}o.byteLength<e.byteLength&&m(this,he,_e).call(this,e.subarray(o.byteLength),t+o.byteLength)},ke=new WeakSet,Ze=function(e,t){let s=0,r=e.written.length-1,a=-1;for(;s<=r;){let o=Math.floor(s+(r-s+1)/2);e.written[o].start<=t.start?(s=o+1,a=o):r=o-1}for(e.written.splice(a+1,0,t),(a===-1||e.written[a].end<t.start)&&a++;a<e.written.length-1&&e.written[a].end>=e.written[a+1].start;)e.written[a].end=Math.max(e.written[a].end,e.written[a+1].end),e.written.splice(a+1,1)},Ee=new WeakSet,Ke=function(e){let s={start:Math.floor(e/i(this,B))*i(this,B),data:new Uint8Array(i(this,B)),written:[],shouldFlush:!1};return i(this,_).push(s),i(this,_).sort((r,a)=>r.start-a.start),i(this,_).indexOf(s)},J=new WeakSet,le=function(e=!1){for(let t=0;t<i(this,_).length;t++){let s=i(this,_)[t];if(!(!s.shouldFlush&&!e)){for(let r of s.written)i(this,K).options.onData?.(s.data.subarray(r.start,r.end),s.start+r.start);i(this,_).splice(t--,1)}}};var di=class extends ze{constructor(e){super(new Te({onData:(t,s)=>e.stream.write({type:"write",data:t,position:s}),chunked:!0,chunkSize:e.options?.chunkSize}))}},Ae=1e3,mi=["avc","hevc","vp9","av1"],pi=["aac","opus"],ci=2082844800,wi=["strict","offset","cross-track-offset"],h,f,fe,k,T,S,$,H,Oe,R,P,Y,Me,Qe,Be,Je,Ie,Ye,De,et,Ue,tt,ue,xe,M,I,We,it,ee,de,me,Fe,q,te,pe,Ne,vi=class{constructor(e){if(d(this,Me),d(this,Be),d(this,Ie),d(this,De),d(this,Ue),d(this,ue),d(this,M),d(this,We),d(this,ee),d(this,me),d(this,q),d(this,pe),d(this,h,void 0),d(this,f,void 0),d(this,fe,void 0),d(this,k,void 0),d(this,T,null),d(this,S,null),d(this,$,Math.floor(Date.now()/1e3)+ci),d(this,H,[]),d(this,Oe,1),d(this,R,[]),d(this,P,[]),d(this,Y,!1),m(this,Me,Qe).call(this,e),e.video=X(e.video),e.audio=X(e.audio),e.fastStart=X(e.fastStart),this.target=e.target,C(this,h,{firstTimestampBehavior:"strict",...e}),e.target instanceof qe)C(this,f,new li(e.target));else if(e.target instanceof Te)C(this,f,new ze(e.target));else if(e.target instanceof Xe)C(this,f,new di(e.target));else throw new Error(`Invalid target: ${e.target}`);m(this,De,et).call(this),m(this,Be,Je).call(this)}addVideoChunk(e,t,s,r){if(!(e instanceof EncodedVideoChunk))throw new TypeError("addVideoChunk's first argument (sample) must be of type EncodedVideoChunk.");if(t&&typeof t!="object")throw new TypeError("addVideoChunk's second argument (meta), when provided, must be an object.");if(s!==void 0&&(!Number.isFinite(s)||s<0))throw new TypeError("addVideoChunk's third argument (timestamp), when provided, must be a non-negative real number.");if(r!==void 0&&!Number.isFinite(r))throw new TypeError("addVideoChunk's fourth argument (compositionTimeOffset), when provided, must be a real number.");let a=new Uint8Array(e.byteLength);e.copyTo(a),this.addVideoChunkRaw(a,e.type,s??e.timestamp,e.duration,t,r)}addVideoChunkRaw(e,t,s,r,a,o){if(!(e instanceof Uint8Array))throw new TypeError("addVideoChunkRaw's first argument (data) must be an instance of Uint8Array.");if(t!=="key"&&t!=="delta")throw new TypeError("addVideoChunkRaw's second argument (type) must be either 'key' or 'delta'.");if(!Number.isFinite(s)||s<0)throw new TypeError("addVideoChunkRaw's third argument (timestamp) must be a non-negative real number.");if(!Number.isFinite(r)||r<0)throw new TypeError("addVideoChunkRaw's fourth argument (duration) must be a non-negative real number.");if(a&&typeof a!="object")throw new TypeError("addVideoChunkRaw's fifth argument (meta), when provided, must be an object.");if(o!==void 0&&!Number.isFinite(o))throw new TypeError("addVideoChunkRaw's sixth argument (compositionTimeOffset), when provided, must be a real number.");if(m(this,pe,Ne).call(this),!i(this,h).video)throw new Error("No video track declared.");if(typeof i(this,h).fastStart=="object"&&i(this,T).samples.length===i(this,h).fastStart.expectedVideoChunks)throw new Error(`Cannot add more video chunks than specified in 'fastStart' (${i(this,h).fastStart.expectedVideoChunks}).`);let l=m(this,ue,xe).call(this,i(this,T),e,t,s,r,a,o);if(i(this,h).fastStart==="fragmented"&&i(this,S)){for(;i(this,P).length>0&&i(this,P)[0].decodeTimestamp<=l.decodeTimestamp;){let u=i(this,P).shift();m(this,M,I).call(this,i(this,S),u)}l.decodeTimestamp<=i(this,S).lastDecodeTimestamp?m(this,M,I).call(this,i(this,T),l):i(this,R).push(l)}else m(this,M,I).call(this,i(this,T),l)}addAudioChunk(e,t,s){if(!(e instanceof EncodedAudioChunk))throw new TypeError("addAudioChunk's first argument (sample) must be of type EncodedAudioChunk.");if(t&&typeof t!="object")throw new TypeError("addAudioChunk's second argument (meta), when provided, must be an object.");if(s!==void 0&&(!Number.isFinite(s)||s<0))throw new TypeError("addAudioChunk's third argument (timestamp), when provided, must be a non-negative real number.");let r=new Uint8Array(e.byteLength);e.copyTo(r),this.addAudioChunkRaw(r,e.type,s??e.timestamp,e.duration,t)}addAudioChunkRaw(e,t,s,r,a){if(!(e instanceof Uint8Array))throw new TypeError("addAudioChunkRaw's first argument (data) must be an instance of Uint8Array.");if(t!=="key"&&t!=="delta")throw new TypeError("addAudioChunkRaw's second argument (type) must be either 'key' or 'delta'.");if(!Number.isFinite(s)||s<0)throw new TypeError("addAudioChunkRaw's third argument (timestamp) must be a non-negative real number.");if(!Number.isFinite(r)||r<0)throw new TypeError("addAudioChunkRaw's fourth argument (duration) must be a non-negative real number.");if(a&&typeof a!="object")throw new TypeError("addAudioChunkRaw's fifth argument (meta), when provided, must be an object.");if(m(this,pe,Ne).call(this),!i(this,h).audio)throw new Error("No audio track declared.");if(typeof i(this,h).fastStart=="object"&&i(this,S).samples.length===i(this,h).fastStart.expectedAudioChunks)throw new Error(`Cannot add more audio chunks than specified in 'fastStart' (${i(this,h).fastStart.expectedAudioChunks}).`);let o=m(this,ue,xe).call(this,i(this,S),e,t,s,r,a);if(i(this,h).fastStart==="fragmented"&&i(this,T)){for(;i(this,R).length>0&&i(this,R)[0].decodeTimestamp<=o.decodeTimestamp;){let l=i(this,R).shift();m(this,M,I).call(this,i(this,T),l)}o.decodeTimestamp<=i(this,T).lastDecodeTimestamp?m(this,M,I).call(this,i(this,S),o):i(this,P).push(o)}else m(this,M,I).call(this,i(this,S),o)}finalize(){if(i(this,Y))throw new Error("Cannot finalize a muxer more than once.");if(i(this,h).fastStart==="fragmented"){for(let t of i(this,R))m(this,M,I).call(this,i(this,T),t);for(let t of i(this,P))m(this,M,I).call(this,i(this,S),t);m(this,me,Fe).call(this,!1)}else i(this,T)&&m(this,ee,de).call(this,i(this,T)),i(this,S)&&m(this,ee,de).call(this,i(this,S));let e=[i(this,T),i(this,S)].filter(Boolean);if(i(this,h).fastStart==="in-memory"){let t;for(let r=0;r<2;r++){let a=re(e,i(this,$)),o=i(this,f).measureBox(a);t=i(this,f).measureBox(i(this,k));let l=i(this,f).pos+o+t;for(let u of i(this,H)){u.offset=l;for(let{data:g}of u.samples)l+=g.byteLength,t+=g.byteLength}if(l<2**32)break;t>=2**32&&(i(this,k).largeSize=!0)}let s=re(e,i(this,$));i(this,f).writeBox(s),i(this,k).size=t,i(this,f).writeBox(i(this,k));for(let r of i(this,H))for(let a of r.samples)i(this,f).write(a.data),a.data=null}else if(i(this,h).fastStart==="fragmented"){let t=i(this,f).pos,s=ti(e);i(this,f).writeBox(s);let r=i(this,f).pos-t;i(this,f).seek(i(this,f).pos-4),i(this,f).writeU32(r)}else{let t=i(this,f).offsets.get(i(this,k)),s=i(this,f).pos-t;i(this,k).size=s,i(this,k).largeSize=s>=2**32,i(this,f).patchBox(i(this,k));let r=re(e,i(this,$));if(typeof i(this,h).fastStart=="object"){i(this,f).seek(i(this,fe)),i(this,f).writeBox(r);let a=t-i(this,f).pos;i(this,f).writeBox(ct(a))}else i(this,f).writeBox(r)}m(this,q,te).call(this),i(this,f).finalize(),C(this,Y,!0)}};return h=new WeakMap,f=new WeakMap,fe=new WeakMap,k=new WeakMap,T=new WeakMap,S=new WeakMap,$=new WeakMap,H=new WeakMap,Oe=new WeakMap,R=new WeakMap,P=new WeakMap,Y=new WeakMap,Me=new WeakSet,Qe=function(e){if(typeof e!="object")throw new TypeError("The muxer requires an options object to be passed to its constructor.");if(!(e.target instanceof ae))throw new TypeError("The target must be provided and an instance of Target.");if(e.video){if(!mi.includes(e.video.codec))throw new TypeError(`Unsupported video codec: ${e.video.codec}`);if(!Number.isInteger(e.video.width)||e.video.width<=0)throw new TypeError(`Invalid video width: ${e.video.width}. Must be a positive integer.`);if(!Number.isInteger(e.video.height)||e.video.height<=0)throw new TypeError(`Invalid video height: ${e.video.height}. Must be a positive integer.`);const t=e.video.rotation;if(typeof t=="number"&&![0,90,180,270].includes(t))throw new TypeError(`Invalid video rotation: ${t}. Has to be 0, 90, 180 or 270.`);if(Array.isArray(t)&&(t.length!==9||t.some(s=>typeof s!="number")))throw new TypeError(`Invalid video transformation matrix: ${t.join()}`);if(e.video.frameRate!==void 0&&(!Number.isInteger(e.video.frameRate)||e.video.frameRate<=0))throw new TypeError(`Invalid video frame rate: ${e.video.frameRate}. Must be a positive integer.`)}if(e.audio){if(!pi.includes(e.audio.codec))throw new TypeError(`Unsupported audio codec: ${e.audio.codec}`);if(!Number.isInteger(e.audio.numberOfChannels)||e.audio.numberOfChannels<=0)throw new TypeError(`Invalid number of audio channels: ${e.audio.numberOfChannels}. Must be a positive integer.`);if(!Number.isInteger(e.audio.sampleRate)||e.audio.sampleRate<=0)throw new TypeError(`Invalid audio sample rate: ${e.audio.sampleRate}. Must be a positive integer.`)}if(e.firstTimestampBehavior&&!wi.includes(e.firstTimestampBehavior))throw new TypeError(`Invalid first timestamp behavior: ${e.firstTimestampBehavior}`);if(typeof e.fastStart=="object"){if(e.video){if(e.fastStart.expectedVideoChunks===void 0)throw new TypeError("'fastStart' is an object but is missing property 'expectedVideoChunks'.");if(!Number.isInteger(e.fastStart.expectedVideoChunks)||e.fastStart.expectedVideoChunks<0)throw new TypeError("'expectedVideoChunks' must be a non-negative integer.")}if(e.audio){if(e.fastStart.expectedAudioChunks===void 0)throw new TypeError("'fastStart' is an object but is missing property 'expectedAudioChunks'.");if(!Number.isInteger(e.fastStart.expectedAudioChunks)||e.fastStart.expectedAudioChunks<0)throw new TypeError("'expectedAudioChunks' must be a non-negative integer.")}}else if(![!1,"in-memory","fragmented"].includes(e.fastStart))throw new TypeError("'fastStart' option must be false, 'in-memory', 'fragmented' or an object.");if(e.minFragmentDuration!==void 0&&(!Number.isFinite(e.minFragmentDuration)||e.minFragmentDuration<0))throw new TypeError("'minFragmentDuration' must be a non-negative number.")},Be=new WeakSet,Je=function(){if(i(this,f).writeBox(pt({holdsAvc:i(this,h).video?.codec==="avc",fragmented:i(this,h).fastStart==="fragmented"})),C(this,fe,i(this,f).pos),i(this,h).fastStart==="in-memory")C(this,k,Se(!1));else if(i(this,h).fastStart!=="fragmented"){if(typeof i(this,h).fastStart=="object"){let e=m(this,Ie,Ye).call(this);i(this,f).seek(i(this,f).pos+e)}C(this,k,Se(!0)),i(this,f).writeBox(i(this,k))}m(this,q,te).call(this)},Ie=new WeakSet,Ye=function(){if(typeof i(this,h).fastStart!="object")return;let e=0,t=[i(this,h).fastStart.expectedVideoChunks,i(this,h).fastStart.expectedAudioChunks];for(let s of t)s&&(e+=8*Math.ceil(.6666666666666666*s),e+=4*s,e+=12*Math.ceil(.6666666666666666*s),e+=4*s,e+=8*s);return e+=4096,e},De=new WeakSet,et=function(){if(i(this,h).video&&C(this,T,{id:1,info:{type:"video",codec:i(this,h).video.codec,width:i(this,h).video.width,height:i(this,h).video.height,rotation:i(this,h).video.rotation??0,decoderConfig:null},timescale:i(this,h).video.frameRate??57600,samples:[],finalizedChunks:[],currentChunk:null,firstDecodeTimestamp:void 0,lastDecodeTimestamp:-1,timeToSampleTable:[],compositionTimeOffsetTable:[],lastTimescaleUnits:null,lastSample:null,compactlyCodedChunkTable:[]}),i(this,h).audio&&(C(this,S,{id:i(this,h).video?2:1,info:{type:"audio",codec:i(this,h).audio.codec,numberOfChannels:i(this,h).audio.numberOfChannels,sampleRate:i(this,h).audio.sampleRate,decoderConfig:null},timescale:i(this,h).audio.sampleRate,samples:[],finalizedChunks:[],currentChunk:null,firstDecodeTimestamp:void 0,lastDecodeTimestamp:-1,timeToSampleTable:[],compositionTimeOffsetTable:[],lastTimescaleUnits:null,lastSample:null,compactlyCodedChunkTable:[]}),i(this,h).audio.codec==="aac")){let e=m(this,Ue,tt).call(this,2,i(this,h).audio.sampleRate,i(this,h).audio.numberOfChannels);i(this,S).info.decoderConfig={codec:i(this,h).audio.codec,description:e,numberOfChannels:i(this,h).audio.numberOfChannels,sampleRate:i(this,h).audio.sampleRate}}},Ue=new WeakSet,tt=function(e,t,s){let a=[96e3,88200,64e3,48e3,44100,32e3,24e3,22050,16e3,12e3,11025,8e3,7350].indexOf(t),o=s,l="";l+=e.toString(2).padStart(5,"0"),l+=a.toString(2).padStart(4,"0"),a===15&&(l+=t.toString(2).padStart(24,"0")),l+=o.toString(2).padStart(4,"0");let u=Math.ceil(l.length/8)*8;l=l.padEnd(u,"0");let g=new Uint8Array(l.length/8);for(let b=0;b<l.length;b+=8)g[b/8]=parseInt(l.slice(b,b+8),2);return g},ue=new WeakSet,xe=function(e,t,s,r,a,o,l){let u=r/1e6,g=(r-(l??0))/1e6,b=a/1e6,U=m(this,We,it).call(this,u,g,e);return u=U.presentationTimestamp,g=U.decodeTimestamp,o?.decoderConfig&&(e.info.decoderConfig===null?e.info.decoderConfig=o.decoderConfig:Object.assign(e.info.decoderConfig,o.decoderConfig)),{presentationTimestamp:u,decodeTimestamp:g,duration:b,data:t,size:t.byteLength,type:s,timescaleUnitsToNextSample:O(b,e.timescale)}},M=new WeakSet,I=function(e,t){i(this,h).fastStart!=="fragmented"&&e.samples.push(t);const s=O(t.presentationTimestamp-t.decodeTimestamp,e.timescale);if(e.lastTimescaleUnits!==null){let a=O(t.decodeTimestamp,e.timescale,!1),o=Math.round(a-e.lastTimescaleUnits);if(e.lastTimescaleUnits+=o,e.lastSample.timescaleUnitsToNextSample=o,i(this,h).fastStart!=="fragmented"){let l=se(e.timeToSampleTable);l.sampleCount===1?(l.sampleDelta=o,l.sampleCount++):l.sampleDelta===o?l.sampleCount++:(l.sampleCount--,e.timeToSampleTable.push({sampleCount:2,sampleDelta:o}));const u=se(e.compositionTimeOffsetTable);u.sampleCompositionTimeOffset===s?u.sampleCount++:e.compositionTimeOffsetTable.push({sampleCount:1,sampleCompositionTimeOffset:s})}}else e.lastTimescaleUnits=0,i(this,h).fastStart!=="fragmented"&&(e.timeToSampleTable.push({sampleCount:1,sampleDelta:O(t.duration,e.timescale)}),e.compositionTimeOffsetTable.push({sampleCount:1,sampleCompositionTimeOffset:s}));e.lastSample=t;let r=!1;if(!e.currentChunk)r=!0;else{let a=t.presentationTimestamp-e.currentChunk.startTimestamp;if(i(this,h).fastStart==="fragmented"){let o=i(this,T)??i(this,S);const l=i(this,h).minFragmentDuration??1;e===o&&t.type==="key"&&a>=l&&(r=!0,m(this,me,Fe).call(this))}else r=a>=.5}r&&(e.currentChunk&&m(this,ee,de).call(this,e),e.currentChunk={startTimestamp:t.presentationTimestamp,samples:[]}),e.currentChunk.samples.push(t)},We=new WeakSet,it=function(e,t,s){const r=i(this,h).firstTimestampBehavior==="strict",a=s.lastDecodeTimestamp===-1;if(r&&a&&t!==0)throw new Error(`The first chunk for your media track must have a timestamp of 0 (received DTS=${t}).Non-zero first timestamps are often caused by directly piping frames or audio data from a MediaStreamTrack into the encoder. Their timestamps are typically relative to the age of thedocument, which is probably what you want.
+
+If you want to offset all timestamps of a track such that the first one is zero, set firstTimestampBehavior: 'offset' in the options.
+`);if(i(this,h).firstTimestampBehavior==="offset"||i(this,h).firstTimestampBehavior==="cross-track-offset"){s.firstDecodeTimestamp===void 0&&(s.firstDecodeTimestamp=t);let l;i(this,h).firstTimestampBehavior==="offset"?l=s.firstDecodeTimestamp:l=Math.min(i(this,T)?.firstDecodeTimestamp??1/0,i(this,S)?.firstDecodeTimestamp??1/0),t-=l,e-=l}if(t<s.lastDecodeTimestamp)throw new Error(`Timestamps must be monotonically increasing (DTS went from ${s.lastDecodeTimestamp*1e6} to ${t*1e6}).`);return s.lastDecodeTimestamp=t,{presentationTimestamp:e,decodeTimestamp:t}},ee=new WeakSet,de=function(e){if(i(this,h).fastStart==="fragmented")throw new Error("Can't finalize individual chunks if 'fastStart' is set to 'fragmented'.");if(e.currentChunk){if(e.finalizedChunks.push(e.currentChunk),i(this,H).push(e.currentChunk),(e.compactlyCodedChunkTable.length===0||se(e.compactlyCodedChunkTable).samplesPerChunk!==e.currentChunk.samples.length)&&e.compactlyCodedChunkTable.push({firstChunk:e.finalizedChunks.length,samplesPerChunk:e.currentChunk.samples.length}),i(this,h).fastStart==="in-memory"){e.currentChunk.offset=0;return}e.currentChunk.offset=i(this,f).pos;for(let t of e.currentChunk.samples)i(this,f).write(t.data),t.data=null;m(this,q,te).call(this)}},me=new WeakSet,Fe=function(e=!0){if(i(this,h).fastStart!=="fragmented")throw new Error("Can't finalize a fragment unless 'fastStart' is set to 'fragmented'.");let t=[i(this,T),i(this,S)].filter(u=>u&&u.currentChunk);if(t.length===0)return;let s=ut(this,Oe)._++;if(s===1){let u=re(t,i(this,$),!0);i(this,f).writeBox(u)}let r=i(this,f).pos,a=$e(s,t);i(this,f).writeBox(a);{let u=Se(!1),g=0;for(let U of t)for(let ie of U.currentChunk.samples)g+=ie.size;let b=i(this,f).measureBox(u)+g;b>=4294967296&&(u.largeSize=!0,b=i(this,f).measureBox(u)+g),u.size=b,i(this,f).writeBox(u)}for(let u of t){u.currentChunk.offset=i(this,f).pos,u.currentChunk.moofOffset=r;for(let g of u.currentChunk.samples)i(this,f).write(g.data),g.data=null}let o=i(this,f).pos;i(this,f).seek(i(this,f).offsets.get(a));let l=$e(s,t);i(this,f).writeBox(l),i(this,f).seek(o);for(let u of t)u.finalizedChunks.push(u.currentChunk),i(this,H).push(u.currentChunk),u.currentChunk=null;e&&m(this,q,te).call(this)},q=new WeakSet,te=function(){i(this,f)instanceof ze&&i(this,f).flush()},pe=new WeakSet,Ne=function(){if(i(this,Y))throw new Error("Cannot add new video or audio chunks after the file has been finalized.")},ft(Re)})();typeof module=="object"&&typeof module.exports=="object"&&Object.assign(module.exports,Mp4Muxer);
+
+</script>
+<script>
+"use strict";
+/* ═══════════ 媽媽Play 影片小幫手 — 主程式 ═══════════ */
+
+/* ---------- 儲存（localStorage 不可用時退回記憶體） ---------- */
+const store = (() => {
+  let ok = false, mem = {};
+  try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); ok = true; } catch (e) {}
+  return {
+    get(k, d) {
+      try { const v = ok ? localStorage.getItem(k) : mem[k]; return v == null ? d : JSON.parse(v); }
+      catch (e) { return d; }
+    },
+    set(k, v) {
+      const s = JSON.stringify(v);
+      if (ok) { try { localStorage.setItem(k, s); } catch (e) {} }
+      mem[k] = s;
+    }
+  };
+})();
+
+const DEFAULT_CATS = ['親子烘焙', '小廚師烘焙夏令營', '小廚師烘焙寒令營', '生日包場烘焙派對'];
+const DEFAULT_TAGS = '#{活動名稱} #媽媽Play #台北親子烘焙 #3歲至15歲親子協作或8歲以上獨立製作 #專業親子烘焙老師帶領 #輕鬆逐步完成';
+const DEFAULT_PILLS = {
+  '親子烘焙': ['和孩子一起輕鬆玩親子烘焙', '大手小手一起做點心', '和孩子的甜甜約會', '做點心，也做回憶', '親子同樂的烘焙時光'],
+  '生日包場烘焙派對': ['賓主盡歡的歡樂派對', '專屬你們的烘焙派對', '生日就要這樣慶祝', '自己的蛋糕自己做', '歡樂滿屋的包場派對'],
+  '小廚師烘焙夏令營': ['小廚師烘焙手作夏令營'],
+  '小廚師烘焙寒令營': ['小廚師烘焙手作寒令營'],
+};
+const DEFAULT_LOGO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAVAAAAB8CAYAAAFI9ti2AAAACXBIWXMAAB7CAAAewgFu0HU+AAAACXRFWHRDb21tZW50AACJKo0GAAAgAElEQVR4nO19d9wdRdX/iygIL76iSFWkSK8RjYCIARFQUVCKNJEmRbACKkjvNfTeQgkl1IQWSiChhIAd2/taJr33kIT4+2t/8927s8/Zc8+Znd279+59wj2fz/fzPHd3ZnbmzNmzU86c819RFP0XhVnjzF0t1uXX6wavZORQd8W8FY0SQkXHr3l29J/fTg6uONL85+1JEWnscVU2uOlhC69/zdXXVTD932J1X0VpHva3uorSgiducnG0eNgf04ctfuD3rqKDQyoKTP3KTZnfrYpV04M83BQfYK9/0OWff9GLTfnfHfJ2mn/CBhc0Vb5QRUmmBjcG3Rgte2O8yhFgyk7XppVa+szfovmXv5x5MP5/977fZho891dPZxpRqKI28eNIvej2cRHnqits/CfO0mQvWvr030QO8cZP3PyS+O+kbS6P/y5++I/BlcxwlBfOK6td07qQVv690f/mjSksq7zwnS12oRVbeOPraSMoLR35v96KSojldP3zS71Q3kJpJVz3aRSqa8u++cEJpe73VdT+3thiGPl9NAW5fiV7hvTc8IoCkz97VVMFF1zxSqaieXpTeOHelnqP/y7MUeElipY88WexQhZnkYcdkCBi/4/jjZAqXKiivKDk/7U86cYK5dzn47BSzgqFur4IkgfdrHWnxMHk/z2DOGov7tCuyrcCVQ4tBtRdObGirpILrn0196ujdfWsYx+mb/u0MvoyuKLT9ro1reikLS+N/y66++3cCuNLxT+Rs3/4aLUVtYU+6Ap3xP/3VdTe25Wl00ZdV1ns0UpFmyro/s7+0eN5lbyAf7XwG8NETfda7F30U4oHHeEKct/yGQcOaeJmgtfd/wtvekNsnMXHLL7De8X9JmKEv7cVqWhayMTNLonmnTMymnfu83SUk/m7ZMRf0t8zD70v0xjC5aZG8ooXfdHSgmkhmFK4a0tf/Ec09/RnmjgsVKRJCwBzf/FUOhtw+cavdXahSqYVJYWP4pVOfl/s/genQW5GECprAmfLV1QpuKkrKS194f+ixY+9E1zRsro1KJEt/BrK4en73RVN/fINmTebVij5O8zo49GPJtc+QfPwMgpXlHIV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';
+
+/* ---------- 全域狀態 ---------- */
+const S = {
+  file: null, url: null, dur: 0, vw: 1080, vh: 1920, fps: 30,
+  segments: [],           // {in, out, speed}
+  curSeg: -1,
+  colorOn: true,
+  blurs: [],              // {id, keys:[{t,x,y,w,h}], from, to}  座標為 0..1 相對值
+  selBlur: -1,
+  category: store.get('mp_cats', DEFAULT_CATS)[0] || '',
+  content: '', title: '', pill: '', titlePos: 'top',
+  date: '', serial: '01',
+  outBlob: null, outName: '',
+  previewing: false,
+};
+
+const $ = id => document.getElementById(id);
+const vid = $('vid');
+const toast = (msg) => { const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200); };
+const fmtT = s => (Math.round(s * 10) / 10).toFixed(1) + 's';
+
+/* ---------- 畫面切換 ---------- */
+function gotoStep(name) {
+  document.querySelectorAll('.step').forEach(b => b.classList.toggle('on', b.dataset.s === name));
+  document.querySelectorAll('.screen').forEach(sc => sc.classList.toggle('on', sc.id === 'sc-' + name));
+  if (name === 'title') { renderTitleUI(); updateTitleOverlay(); }
+  if (name === 'out') { updateFilename(); }
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('.step').forEach(b => b.onclick = () => { if (!b.disabled) gotoStep(b.dataset.s); });
+
+/* ---------- 選擇影片 ---------- */
+$('btnPick').onclick = () => $('filePick').click();
+$('btnRepick').onclick = () => $('filePick').click();
+$('filePick').onchange = e => { const f = e.target.files[0]; if (f) loadVideo(f); };
+
+async function loadVideo(file) {
+  S.file = file;
+  if (S.url) URL.revokeObjectURL(S.url);
+  S.url = URL.createObjectURL(file);
+  vid.src = S.url;
+  await new Promise((res, rej) => {
+    vid.onloadedmetadata = res; vid.onerror = () => rej(new Error('影片無法讀取'));
+  });
+  S.dur = vid.duration;
+  S.vw = vid.videoWidth; S.vh = vid.videoHeight;
+  S.segments = [{ in: 0, out: Math.min(S.dur, 30), speed: 1, zoom: { s: 1, cx: 0.5, cy: 0.5 } }];
+  S.curSeg = 0; S.blurs = []; S.selBlur = -1;
+  // 預設日期＝檔案修改日（近似拍攝日）
+  const d = new Date(file.lastModified);
+  S.date = '' + d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+  $('emptyStage').style.display = 'none';
+  ['tlCard', 'segCard', 'fxCard', 'nextCutCard'].forEach(id => $(id).style.display = '');
+  $('pickCard').style.display = 'none';
+  $('scrub').max = S.dur;
+  document.querySelectorAll('.step').forEach(b => b.disabled = false);
+  renderSegs(); renderBlurBoxes();
+  await buildThumbs();
+}
+
+/* ---------- 縮圖時間軸 ---------- */
+async function buildThumbs() {
+  const N = 8, el = $('thumbs'); el.innerHTML = '';
+  const c = document.createElement('canvas');
+  const ratio = S.vw / S.vh;
+  c.height = 88; c.width = Math.round(88 * ratio);
+  const cx = c.getContext('2d');
+  const seekTo = t => new Promise(res => {
+    if (Math.abs(vid.currentTime - t) < 0.001) return res();
+    const h = () => { vid.removeEventListener('seeked', h); res(); };
+    vid.addEventListener('seeked', h); vid.currentTime = t; });
+  for (let i = 0; i < N; i++) {
+    await seekTo((i + 0.5) / N * S.dur);
+    cx.drawImage(vid, 0, 0, c.width, c.height);
+    const img = new Image(); img.src = c.toDataURL('image/jpeg', 0.6);
+    el.appendChild(img);
+  }
+  vid.currentTime = 0;
+}
+
+/* ---------- 播放頭 / 播放 ---------- */
+$('scrub').oninput = e => { stopPreview(); vid.currentTime = +e.target.value; };
+vid.addEventListener('timeupdate', () => {
+  $('scrub').value = vid.currentTime;
+  $('tcur').textContent = fmtT(vid.currentTime);
+  updateBlurPositions();
+  applyStageTransform();
+  if (S.previewing) previewTick();
+});
+$('btnPlay').onclick = () => {
+  stopPreview();
+  if (vid.paused) { vid.play(); $('btnPlay').textContent = '⏸ 暫停'; }
+  else { vid.pause(); $('btnPlay').textContent = '▶ 播放'; }
+};
+vid.addEventListener('pause', () => { if (!S.previewing) $('btnPlay').textContent = '▶ 播放'; });
+
+/* 只播保留片段（依速度） */
+$('btnPrevSeg').onclick = () => {
+  const segs = sortedSegs(); if (!segs.length) return toast('尚未設定片段');
+  S.previewing = true; S._pi = 0;
+  vid.currentTime = segs[0].in; vid.playbackRate = segs[0].speed; vid.play();
+};
+function previewTick() {
+  const segs = sortedSegs(); const sg = segs[S._pi];
+  if (!sg) return stopPreview();
+  if (vid.currentTime >= sg.out - 0.03) {
+    S._pi++;
+    if (S._pi >= segs.length) { stopPreview(); vid.pause(); return; }
+    vid.currentTime = segs[S._pi].in; vid.playbackRate = segs[S._pi].speed;
+  }
+}
+function stopPreview() { S.previewing = false; vid.playbackRate = 1; }
+
+/* ---------- 片段管理 ---------- */
+const sortedSegs = () => [...S.segments].sort((a, b) => a.in - b.in);
+function renderSegs() {
+  const el = $('segList'); el.innerHTML = '';
+  S.segments.forEach((sg, i) => {
+    if (!sg.zoom) sg.zoom = { s: 1, cx: 0.5, cy: 0.5 };
+    const row = document.createElement('div');
+    row.className = 'segRow' + (i === S.curSeg ? ' cur' : '');
+    const zoomLine = i === S.curSeg ? `
+      <span class="row" style="width:100%;gap:4px;margin-top:4px">
+        <span style="font-size:12.5px;font-weight:700">🔍 聚焦</span>
+        ${[1, 1.3, 1.5, 2].map(z =>
+          `<button class="chip${sg.zoom.s === z ? ' on' : ''}" data-z="${z}" style="padding:5px 9px;font-size:12.5px">${z === 1 ? '關' : z + 'x'}</button>`).join('')}
+        <span class="hint" style="margin:0">${sg.zoom.s > 1 ? '拖曳畫面調整聚焦位置' : ''}</span>
+      </span>` : '';
+    row.innerHTML = `<span class="tm">${fmtT(sg.in)} → ${fmtT(sg.out)}</span>
+      <span class="spd">${[1, 1.5, 2, 3].map(x =>
+        `<button class="chip${sg.speed === x ? ' on' : ''}" data-x="${x}">${x}x</button>`).join('')}</span>
+      <button class="x" title="刪除">✕</button>${zoomLine}`;
+    row.onclick = e => {
+      S.curSeg = i;
+      if (e.target.dataset.x) { sg.speed = +e.target.dataset.x; }
+      if (e.target.dataset.z) {
+        sg.zoom.s = +e.target.dataset.z;
+        // 進入聚焦時跳到片段內，方便即時預覽
+        if (vid.currentTime < sg.in || vid.currentTime > sg.out) vid.currentTime = sg.in;
+      }
+      if (e.target.classList.contains('x')) {
+        S.segments.splice(i, 1); if (S.curSeg >= S.segments.length) S.curSeg = S.segments.length - 1;
+      }
+      renderSegs(); applyStageTransform();
+    };
+    el.appendChild(row);
+  });
+  drawSegBar();
+}
+function drawSegBar() {
+  const bar = $('segBar'); bar.innerHTML = '';
+  S.segments.forEach((sg, i) => {
+    const sp = document.createElement('div');
+    sp.className = 'segSpan' + (i === S.curSeg ? ' cur' : '');
+    sp.style.left = (sg.in / S.dur * 100) + '%';
+    sp.style.width = ((sg.out - sg.in) / S.dur * 100) + '%';
+    bar.appendChild(sp);
+  });
+}
+$('btnAddSeg').onclick = () => {
+  const t = vid.currentTime;
+  S.segments.push({ in: t, out: Math.min(S.dur, t + 5), speed: 1, zoom: { s: 1, cx: 0.5, cy: 0.5 } });
+  S.curSeg = S.segments.length - 1; renderSegs();
+  toast('已新增片段，請調整起訖點');
+};
+
+/* ---------- 畫面縮放（片段聚焦＋模糊微調共用） ---------- */
+S.stageZ = 1; S.blurZoom = false;
+function currentSegAt(t) {
+  return sortedSegs().find(sg => t >= sg.in - 0.02 && t <= sg.out + 0.02);
+}
+function applyStageTransform() {
+  const zw = $('zoomWrap');
+  let s = 1, cx = 0.5, cy = 0.5;
+  if (S.blurZoom && S.selBlur >= 0) {
+    s = 2.2;
+    if (!S.blurZoomC) {
+      const b = S.blurs[S.selBlur];
+      const r = blurRectAt(b, vid.currentTime) || b.keys[0];
+      S.blurZoomC = { cx: r.x + r.w / 2, cy: r.y + r.h / 2 };
+    }
+    cx = S.blurZoomC.cx; cy = S.blurZoomC.cy;
+  } else {
+    const sg = currentSegAt(vid.currentTime);
+    if (sg && sg.zoom && sg.zoom.s > 1) { s = sg.zoom.s; cx = sg.zoom.cx; cy = sg.zoom.cy; }
+  }
+  cx = Math.min(Math.max(cx, 0.5 / s), 1 - 0.5 / s);
+  cy = Math.min(Math.max(cy, 0.5 / s), 1 - 0.5 / s);
+  S.stageZ = s;
+  zw.style.transform = s === 1 ? '' :
+    `translate(${(0.5 - s * cx) * 100}%, ${(0.5 - s * cy) * 100}%) scale(${s})`;
+}
+/* 拖曳畫面移動視野：聚焦模式移動聚焦位置；區域放大模式移動檢視範圍 */
+(() => {
+  const zw = $('zoomWrap');
+  let mode = null, sx = 0, sy = 0, c0 = null, sg0 = null;
+  zw.addEventListener('pointerdown', e => {
+    if (e.target.closest('.blurBox')) return;
+    if (S.blurZoom && S.selBlur >= 0) {
+      if (!S.blurZoomC) applyStageTransform();
+      mode = 'blur'; c0 = { ...S.blurZoomC };
+    } else {
+      const sg = currentSegAt(vid.currentTime) || (S.curSeg >= 0 ? S.segments[S.curSeg] : null);
+      if (!sg || !sg.zoom || sg.zoom.s <= 1) return;
+      mode = 'seg'; sg0 = sg; c0 = { cx: sg.zoom.cx, cy: sg.zoom.cy };
+    }
+    sx = e.clientX; sy = e.clientY;
+    zw.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  zw.addEventListener('pointermove', e => {
+    if (!mode) return;
+    const st = $('stage').getBoundingClientRect();
+    if (mode === 'blur') {
+      const s = 2.2;
+      S.blurZoomC = {
+        cx: Math.min(Math.max(c0.cx - (e.clientX - sx) / st.width / s, 0.5 / s), 1 - 0.5 / s),
+        cy: Math.min(Math.max(c0.cy - (e.clientY - sy) / st.height / s, 0.5 / s), 1 - 0.5 / s),
+      };
+    } else {
+      const s = sg0.zoom.s;
+      sg0.zoom.cx = Math.min(Math.max(c0.cx - (e.clientX - sx) / st.width / s, 0.5 / s), 1 - 0.5 / s);
+      sg0.zoom.cy = Math.min(Math.max(c0.cy - (e.clientY - sy) / st.height / s, 0.5 / s), 1 - 0.5 / s);
+    }
+    applyStageTransform();
+  });
+  const end = () => { mode = null; };
+  zw.addEventListener('pointerup', end); zw.addEventListener('pointercancel', end);
+})();
+$('btnSetIn').onclick = () => {
+  if (S.curSeg < 0) return toast('請先選一個片段');
+  const sg = S.segments[S.curSeg]; sg.in = vid.currentTime;
+  if (sg.out <= sg.in) sg.out = Math.min(S.dur, sg.in + 3);
+  renderSegs();
+};
+$('btnSetOut').onclick = () => {
+  if (S.curSeg < 0) return toast('請先選一個片段');
+  const sg = S.segments[S.curSeg]; sg.out = vid.currentTime;
+  if (sg.out <= sg.in) sg.in = Math.max(0, sg.out - 3);
+  renderSegs();
+};
+
+/* ---------- 色彩預設 ---------- */
+const COLOR_FILTER = 'brightness(1.07) saturate(1.08) sepia(0.12)';
+$('chipColor').onclick = () => {
+  S.colorOn = !S.colorOn;
+  $('chipColor').classList.toggle('on', S.colorOn);
+  applyPreviewFilter();
+};
+function applyPreviewFilter() { vid.style.filter = S.colorOn ? COLOR_FILTER : ''; }
+applyPreviewFilter();
+
+/* ---------- 模糊框 ---------- */
+let blurSeq = 0;
+$('btnAddBlur').onclick = () => {
+  if (!S.file) return toast('請先選擇影片');
+  vid.pause(); stopPreview();
+  const t = vid.currentTime;
+  S.blurs.push({ id: ++blurSeq, keys: [{ t, x: 0.35, y: 0.42, w: 0.3, h: 0.12 }], from: t, to: S.dur });
+  S.selBlur = S.blurs.length - 1;
+  renderBlurBoxes(); syncBlurBtns();
+  toast('拖曳模糊框蓋住姓名，右下圓點調大小');
+};
+$('btnDelBlur').onclick = () => {
+  if (S.selBlur < 0) return;
+  S.blurs.splice(S.selBlur, 1); S.selBlur = -1;
+  renderBlurBoxes(); syncBlurBtns();
+};
+$('btnBlurFrom').onclick = () => { if (S.selBlur >= 0) { S.blurs[S.selBlur].from = vid.currentTime; toast('此框從 ' + fmtT(vid.currentTime) + ' 開始'); } };
+$('btnBlurTo').onclick = () => { if (S.selBlur >= 0) { S.blurs[S.selBlur].to = vid.currentTime; toast('此框到 ' + fmtT(vid.currentTime) + ' 結束'); } };
+function syncBlurBtns() {
+  const on = S.selBlur >= 0;
+  ['btnBlurFrom', 'btnBlurTo', 'btnDelBlur'].forEach(id => $(id).disabled = !on);
+  $('fineRow').hidden = !on;
+  if (!on) { S.blurZoom = false; S.blurZoomC = null; $('btnZoomEdit').classList.remove('on', 'pri'); }
+  applyStageTransform();
+}
+/* 區域放大：以選取的模糊框為中心放大 2.2 倍，方便手指微調 */
+$('btnZoomEdit').onclick = () => {
+  S.blurZoom = !S.blurZoom;
+  S.blurZoomC = null;   // 重新以選取的模糊框為中心
+  $('btnZoomEdit').classList.toggle('on', S.blurZoom);
+  $('btnZoomEdit').classList.toggle('pri', S.blurZoom);
+  applyStageTransform();
+  if (S.blurZoom) toast('拖曳空白處可移動放大範圍');
+};
+/* 微調鈕：箭頭移動、＋－調大小（以目前時間記錄追蹤點） */
+document.querySelectorAll('.nud').forEach(btn => {
+  const act = () => {
+    if (S.selBlur < 0) return;
+    const b = S.blurs[S.selBlur];
+    const r = { ...(blurRectAt(b, vid.currentTime) || b.keys[0]) };
+    const st = 0.008, sz = 0.012, n = btn.dataset.n;
+    if (n === 'l') r.x -= st; if (n === 'r') r.x += st;
+    if (n === 'u') r.y -= st; if (n === 'd') r.y += st;
+    if (n === 'big') { r.w += sz; r.h += sz * 0.6; r.x -= sz / 2; r.y -= sz * 0.3; }
+    if (n === 'small') { r.w = Math.max(0.04, r.w - sz); r.h = Math.max(0.02, r.h - sz * 0.6); r.x += sz / 2; r.y += sz * 0.3; }
+    r.x = Math.min(Math.max(r.x, 0), 1 - r.w); r.y = Math.min(Math.max(r.y, 0), 1 - r.h);
+    setBlurKey(b, vid.currentTime, { x: r.x, y: r.y, w: r.w, h: r.h });
+    updateBlurPositions();
+  };
+  btn.onclick = act;
+});
+
+/* 關鍵影格內插 */
+function blurRectAt(b, t) {
+  if (t < b.from - 0.05 || t > b.to + 0.05) return null;
+  const ks = b.keys;
+  if (t <= ks[0].t) return ks[0];
+  if (t >= ks[ks.length - 1].t) return ks[ks.length - 1];
+  for (let i = 0; i < ks.length - 1; i++) {
+    const a = ks[i], c = ks[i + 1];
+    if (t >= a.t && t <= c.t) {
+      const f = (t - a.t) / (c.t - a.t || 1);
+      return { x: a.x + (c.x - a.x) * f, y: a.y + (c.y - a.y) * f,
+               w: a.w + (c.w - a.w) * f, h: a.h + (c.h - a.h) * f };
+    }
+  }
+  return ks[0];
+}
+function setBlurKey(b, t, rect) {
+  const k = { t, ...rect };
+  const i = b.keys.findIndex(o => Math.abs(o.t - t) < 0.15);
+  if (i >= 0) b.keys[i] = k; else { b.keys.push(k); b.keys.sort((a, c) => a.t - c.t); }
+}
+
+/* 模糊框 DOM 與拖曳 */
+function renderBlurBoxes() {
+  const layer = $('blurLayer'); layer.innerHTML = '';
+  S.blurs.forEach((b, i) => {
+    const el = document.createElement('div');
+    el.className = 'blurBox' + (i === S.selBlur ? ' sel' : '');
+    el.dataset.i = i;
+    el.innerHTML = `<span class="tag">模糊 ${i + 1}</span><div class="hd"></div>`;
+    layer.appendChild(el);
+    attachDrag(el, b);
+  });
+  updateBlurPositions();
+}
+function updateBlurPositions() {
+  const st = $('stage').getBoundingClientRect();
+  document.querySelectorAll('.blurBox').forEach(el => {
+    const b = S.blurs[+el.dataset.i];
+    if (!b) return;
+    const r = blurRectAt(b, vid.currentTime);
+    if (!r) { el.style.display = 'none'; return; }
+    el.style.display = '';
+    el.style.left = (r.x * st.width) + 'px'; el.style.top = (r.y * st.height) + 'px';
+    el.style.width = (r.w * st.width) + 'px'; el.style.height = (r.h * st.height) + 'px';
+  });
+}
+function attachDrag(el, b) {
+  const stage = $('stage');
+  let mode = null, sx = 0, sy = 0, r0 = null;
+  const down = (e, m) => {
+    e.preventDefault(); e.stopPropagation();
+    vid.pause(); stopPreview();
+    S.selBlur = S.blurs.indexOf(b);
+    document.querySelectorAll('.blurBox').forEach(x => x.classList.remove('sel'));
+    el.classList.add('sel'); syncBlurBtns();
+    mode = m; sx = e.clientX; sy = e.clientY;
+    r0 = { ...(blurRectAt(b, vid.currentTime) || b.keys[0]) };
+    el.setPointerCapture(e.pointerId);
+  };
+  el.addEventListener('pointerdown', e => {
+    if (e.target.classList.contains('hd')) down(e, 'size'); else down(e, 'move');
+  });
+  el.addEventListener('pointermove', e => {
+    if (!mode) return;
+    const st = stage.getBoundingClientRect();
+    const dx = (e.clientX - sx) / st.width / S.stageZ, dy = (e.clientY - sy) / st.height / S.stageZ;
+    let r;
+    if (mode === 'move') r = { ...r0, x: Math.min(Math.max(r0.x + dx, 0), 1 - r0.w), y: Math.min(Math.max(r0.y + dy, 0), 1 - r0.h) };
+    else r = { ...r0, w: Math.min(Math.max(r0.w + dx, 0.05), 1 - r0.x), h: Math.min(Math.max(r0.h + dy, 0.03), 1 - r0.y) };
+    setBlurKey(b, vid.currentTime, { x: r.x, y: r.y, w: r.w, h: r.h });
+    updateBlurPositions();
+  });
+  const up = () => { mode = null; };
+  el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+}
+
+/* ---------- 標題系統 ---------- */
+function getCats() { return store.get('mp_cats', DEFAULT_CATS); }
+function getPills() { return store.get('mp_pills', DEFAULT_PILLS); }
+function pillsFor(cat) { return (getPills()[cat] || []).filter(x => x.trim()); }
+function renderTitleUI() {
+  // 分類
+  const cats = getCats();
+  if (!cats.includes(S.category)) S.category = cats[0] || '';
+  const cc = $('catChips'); cc.innerHTML = '';
+  cats.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (c === S.category ? ' on' : ''); b.textContent = c;
+    b.onclick = () => { S.category = c; S.pill = pillsFor(c)[0] || c; renderTitleUI(); autoTitle(); };
+    cc.appendChild(b);
+  });
+  // 分類標語
+  if (!S.pill) S.pill = pillsFor(S.category)[0] || S.category;
+  const pc = $('pillChips'); pc.innerHTML = '';
+  pillsFor(S.category).forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (t === S.pill ? ' on' : '');
+    b.style.fontSize = '12.5px';
+    b.textContent = t.length > 15 ? t.slice(0, 15) + '…' : t;
+    b.title = t;
+    b.onclick = () => { S.pill = t; $('inpPill').value = t; renderTitleUI(); updateTitleOverlay(); };
+    pc.appendChild(b);
+  });
+  $('inpPill').value = S.pill;
+  // 記憶
+  renderRecent('mp_recentContents', 'recentContents', v => { S.content = v; $('inpContent').value = v; autoTitle(); });
+  renderRecent('mp_recentTitles', 'recentTitles', v => { S.title = v; $('inpTitle').value = v; titleTouched = true; updateTitleOverlay(); });
+}
+$('inpPill').oninput = e => { S.pill = e.target.value; updateTitleOverlay(); };
+function renderRecent(key, elId, onPick) {
+  const arr = store.get(key, []); const el = $(elId); el.innerHTML = '';
+  arr.forEach(v => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.style.fontSize = '12.5px';
+    b.textContent = v.length > 14 ? v.slice(0, 14) + '…' : v;
+    b.title = v; b.onclick = () => onPick(v);
+    el.appendChild(b);
+  });
+}
+function pushRecent(key, v) {
+  if (!v) return;
+  let arr = store.get(key, []).filter(x => x !== v);
+  arr.unshift(v); store.set(key, arr.slice(0, 3));
+}
+let titleTouched = false;
+$('inpContent').oninput = e => { S.content = e.target.value.trim(); autoTitle(); };
+$('inpTitle').oninput = e => { S.title = e.target.value; titleTouched = true; updateTitleOverlay(); };
+function autoTitle() {
+  if (titleTouched && $('inpTitle').value.trim()) return;   // 已手動改過就不覆蓋
+  S.title = S.content || '';
+  $('inpTitle').value = S.title;
+  updateTitleOverlay();
+}
+document.querySelectorAll('[data-pos]').forEach(b => b.onclick = () => {
+  S.titlePos = b.dataset.pos;
+  document.querySelectorAll('[data-pos]').forEach(x => x.classList.toggle('on', x === b));
+  updateTitleOverlay();
+});
+
+/* 標題畫成 canvas（輸出與預覽共用，確保一致）
+   結構：橘色主標題框（1–2 行）＋下方藍綠色分類標語小框 */
+function renderTitleCanvas(scale) {   // scale: 相對 1080 寬的倍率
+  const text = (S.title || '').trim();
+  const pill = (S.pill || '').trim();
+  if (!text && !pill) return null;
+  const lines = text ? text.split('\n').filter(l => l.trim() !== '').slice(0, 2) : [];
+  const W = 1080 * scale;
+  const FONT = f => `900 ${f}px "Noto Sans TC", system-ui, sans-serif`;
+  const meas = document.createElement('canvas').getContext('2d');
+
+  // 主標題框
+  let font = 66 * scale;
+  const padX = 44 * scale, padY = 26 * scale, lh = 1.38, maxW = W * 0.86 - padX * 2;
+  let boxW = 0, boxH = 0;
+  if (lines.length) {
+    meas.font = FONT(font);
+    let wMax = Math.max(...lines.map(l => meas.measureText(l).width));
+    while (wMax > maxW && font > 30 * scale) { font -= 2 * scale; meas.font = FONT(font);
+      wMax = Math.max(...lines.map(l => meas.measureText(l).width)); }
+    boxW = Math.min(W * 0.86, wMax + padX * 2);
+    boxH = lines.length * font * lh + padY * 2;
+  }
+
+  // 分類標語小框（藥丸形，兩端 100% 圓弧，疊放 50% 在主標題框上）
+  let pFont = 46 * scale, pPadX = 32 * scale, pPadY = 15 * scale, pillW = 0, pillH = 0;
+  if (pill) {
+    meas.font = FONT(pFont);
+    let pw = meas.measureText(pill).width;
+    while (pw > W * 0.84 - pPadX * 2 && pFont > 24 * scale) { pFont -= 2 * scale; meas.font = FONT(pFont); pw = meas.measureText(pill).width; }
+    pillW = pw + pPadX * 2;
+    pillH = pFont + pPadY * 2;
+  }
+
+  // 橘框向下延伸：讓疊上來的藍色小框與最後一行文字保持舒適間隔
+  if (pill && lines.length) boxH += pillH * 0.5 + 8 * scale;
+  const overlap = (pill && lines.length) ? pillH * 0.5 : 0;   // 疊放 50%
+  const totW = Math.ceil(Math.max(boxW, pillW));
+  const totH = Math.ceil(boxH + pillH - overlap);
+  const c = document.createElement('canvas');
+  c.width = Math.max(totW, 2); c.height = Math.max(totH, 2);
+  const g = c.getContext('2d');
+
+  if (lines.length) {
+    g.fillStyle = 'rgba(238,143,48,0.80)';
+    g.beginPath(); g.roundRect((totW - boxW) / 2, 0, boxW, boxH, 18 * scale); g.fill();
+    g.font = FONT(font);
+    g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.shadowColor = 'rgba(0,0,0,0.18)'; g.shadowBlur = 4 * scale; g.shadowOffsetY = 1 * scale;
+    lines.forEach((l, i) => g.fillText(l, totW / 2, padY + font * lh * (i + 0.5)));
+    g.shadowColor = 'transparent';
+  }
+  if (pill) {
+    const py = boxH - overlap;
+    g.fillStyle = 'rgba(106,178,188,0.92)';
+    g.beginPath(); g.roundRect((totW - pillW) / 2, py, pillW, pillH, pillH / 2); g.fill();
+    g.font = FONT(pFont);
+    g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.shadowColor = 'rgba(0,0,0,0.15)'; g.shadowBlur = 3 * scale; g.shadowOffsetY = 1 * scale;
+    g.fillText(pill, totW / 2, py + pillH / 2 + 1 * scale);
+  }
+  return c;
+}
+const POS_Y = { top: 0.20, mid: 0.50, bot: 0.78 };
+function updateTitleOverlay() {
+  const c = renderTitleCanvas(0.5);
+  const ov = $('titleOverlay');
+  if (!c) { ov.style.display = 'none'; return; }
+  ov.style.display = '';
+  $('titleImg').src = c.toDataURL();
+  const st = $('stage').getBoundingClientRect();
+  ov.style.width = (c.width / (1080 * 0.5) * st.width) + 'px';
+  ov.style.top = (POS_Y[S.titlePos] * 100) + '%';
+}
+
+/* ---------- Logo ---------- */
+function loadLogoUI() {
+  const d = store.get('mp_logo', DEFAULT_LOGO);
+  if (d) {
+    $('logoPrev').src = d; $('logoPrev').style.display = ''; $('btnLogoDel').style.display = '';
+    $('logoOverlay').src = d; $('logoOverlay').style.display = '';
+  } else {
+    $('logoPrev').style.display = 'none'; $('btnLogoDel').style.display = 'none';
+    $('logoOverlay').style.display = 'none';
+  }
+}
+$('btnLogoPick').onclick = () => $('logoPick').click();
+$('logoPick').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { store.set('mp_logo', rd.result); loadLogoUI(); toast('Logo 已設定'); };
+  rd.readAsDataURL(f);
+};
+$('btnLogoDel').onclick = () => { store.set('mp_logo', DEFAULT_LOGO); loadLogoUI(); toast('已還原為內建 Logo'); };
+
+/* ---------- 設定 ---------- */
+$('btnSettings').onclick = () => { renderSettings(); $('mSettings').classList.add('show'); };
+$('btnCloseSettings').onclick = () => {
+  store.set('mp_tags', $('inpTags').value);
+  store.set('mp_drive', $('inpDrive').value.trim());
+  // 儲存各分類標語清單
+  const pills = {};
+  document.querySelectorAll('#pillManage textarea').forEach(ta => {
+    pills[ta.dataset.cat] = ta.value.split('\n').map(x => x.trim()).filter(Boolean);
+  });
+  if (Object.keys(pills).length) store.set('mp_pills', pills);
+  S.pill = '';
+  $('mSettings').classList.remove('show');
+  renderTitleUI(); updateTitleOverlay();
+};
+function renderSettings() {
+  $('inpTags').value = store.get('mp_tags', DEFAULT_TAGS);
+  $('inpDrive').value = store.get('mp_drive', '');
+  // 標語清單
+  const pm = $('pillManage'); pm.innerHTML = '';
+  const pills = getPills();
+  getCats().forEach(cat => {
+    const lbl = document.createElement('div');
+    lbl.style.cssText = 'font-size:13px;font-weight:700;margin:8px 0 4px';
+    lbl.textContent = cat;
+    const ta = document.createElement('textarea');
+    ta.rows = Math.max(2, (pills[cat] || []).length);
+    ta.dataset.cat = cat;
+    ta.value = (pills[cat] || []).join('\n');
+    pm.appendChild(lbl); pm.appendChild(ta);
+  });
+  const el = $('catManage'); el.innerHTML = '';
+  getCats().forEach((c, i) => {
+    const row = document.createElement('div'); row.className = 'mgRow';
+    row.innerHTML = `<span>${c}</span><button class="btn sm warn">刪除</button>`;
+    row.querySelector('button').onclick = () => {
+      const arr = getCats(); arr.splice(i, 1); store.set('mp_cats', arr); renderSettings();
+    };
+    el.appendChild(row);
+  });
+  loadLogoUI();
+}
+$('btnAddCat').onclick = () => {
+  const v = $('inpNewCat').value.trim(); if (!v) return;
+  const arr = getCats(); if (!arr.includes(v)) arr.push(v);
+  store.set('mp_cats', arr); $('inpNewCat').value = ''; renderSettings();
+};
+
+/* ---------- 檔名 ---------- */
+$('btnToTitle').onclick = () => {
+  if (!S.segments.length) return toast('請至少保留一個片段');
+  gotoStep('title');
+};
+$('btnToOut').onclick = () => {
+  if (!S.title.trim()) return toast('請輸入標題文字');
+  pushRecent('mp_recentContents', S.content);
+  pushRecent('mp_recentTitles', S.title);
+  gotoStep('out');
+};
+function nameBase() {
+  return `${S.category}+${S.content || '活動'}_${S.date}_${S.serial}`;
+}
+function updateFilename() {
+  // 流水號：同活動同日自動遞增
+  const key = S.category + '|' + S.content + '|' + S.date;
+  const map = store.get('mp_serial', {});
+  if (!S._serialTouched) S.serial = String((map[key] || 0) + 1).padStart(2, '0');
+  $('inpDate').value = S.date; $('inpSerial').value = S.serial;
+  $('fnPreview').textContent = `後製檔：${nameBase()}_後製.mp4　／　原始檔請命名：${nameBase()}_原始.mp4`;
+}
+$('inpDate').oninput = e => { S.date = e.target.value.trim(); updateFilename(); };
+$('inpSerial').oninput = e => { S.serial = e.target.value.trim().padStart(2, '0'); S._serialTouched = true;
+  $('fnPreview').textContent = `後製檔：${nameBase()}_後製.mp4　／　原始檔請命名：${nameBase()}_原始.mp4`; };
+
+/* ---------- 文案 ---------- */
+function buildCopyText() {
+  const tags = store.get('mp_tags', DEFAULT_TAGS).replace(/\{活動名稱\}/g, S.content || S.category);
+  const head = [S.title, S.pill].filter(Boolean).join('\n');
+  return head + '\n\n' + tags;
+}
+
+/* ═══════════ 輸出引擎 ═══════════ */
+const OUT_W = 1080, OUT_H = 1920, OUT_FPS = 30;
+
+function buildPlan() {
+  const segs = sortedSegs();
+  let cum = 0;
+  const plan = segs.map(sg => {
+    const dOut = (sg.out - sg.in) / sg.speed;
+    const p = { ...sg, start: cum, end: cum + dOut };
+    cum += dOut; return p;
+  });
+  return { plan, total: cum };
+}
+function segOfPlan(plan, tOut) {
+  for (const p of plan) if (tOut < p.end + 1e-6) return p;
+  return plan[plan.length - 1];
+}
+function srcTimeAt(plan, tOut) {
+  const p = segOfPlan(plan, tOut);
+  return Math.min(p.in + Math.max(0, tOut - p.start) * p.speed, p.out - 0.001);
+}
+
+async function exportVideo(progressCb) {
+  const { plan, total } = buildPlan();
+  if (!plan.length || total < 0.5) throw new Error('片段太短或未設定');
+  const totalFrames = Math.max(1, Math.round(total * OUT_FPS));
+
+  /* — 編碼器支援偵測 — */
+  if (!('VideoEncoder' in window)) throw new Error('此瀏覽器不支援影片編碼（請用新版 Chrome）');
+  let vCodec = 'avc1.640028', vCodecId = 'avc';
+  let vc = await VideoEncoder.isConfigSupported({ codec: vCodec, width: OUT_W, height: OUT_H, framerate: OUT_FPS });
+  if (!vc.supported) {
+    vCodec = 'vp09.00.40.08'; vCodecId = 'vp9';
+    vc = await VideoEncoder.isConfigSupported({ codec: vCodec, width: OUT_W, height: OUT_H, framerate: OUT_FPS });
+    if (!vc.supported) throw new Error('找不到可用的影片編碼器');
+  }
+
+  /* — 音訊解碼（整段） — */
+  let audioBuf = null;
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+    const ab = await S.file.arrayBuffer();
+    audioBuf = await ac.decodeAudioData(ab);
+    ac.close();
+  } catch (e) { console.warn('音訊解碼失敗，輸出將無聲音', e); }
+
+  let aCodec = null, aCodecId = null, aRate = 48000, aCh = 1;
+  if (audioBuf && 'AudioEncoder' in window) {
+    aRate = audioBuf.sampleRate; aCh = Math.min(audioBuf.numberOfChannels, 2);
+    for (const [codec, id] of [['mp4a.40.2', 'aac'], ['opus', 'opus']]) {
+      try {
+        const r = aCodecId === null && await AudioEncoder.isConfigSupported({
+          codec, sampleRate: id === 'opus' ? 48000 : aRate, numberOfChannels: aCh, bitrate: 128000 });
+        if (r && r.supported) { aCodec = codec; aCodecId = id; break; }
+      } catch (e) {}
+    }
+    if (aCodecId === 'opus') aRate = 48000;
+  }
+
+  /* — Muxer — */
+  const muxOpts = {
+    target: new Mp4Muxer.ArrayBufferTarget(),
+    video: { codec: vCodecId, width: OUT_W, height: OUT_H },
+    fastStart: 'in-memory',
+  };
+  if (aCodecId) muxOpts.audio = { codec: aCodecId, numberOfChannels: aCh, sampleRate: aRate };
+  const muxer = new Mp4Muxer.Muxer(muxOpts);
+
+  let encErr = null;
+  const venc = new VideoEncoder({
+    output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+    error: e => { encErr = e; },
+  });
+  venc.configure({ codec: vCodec, width: OUT_W, height: OUT_H, framerate: OUT_FPS,
+    bitrate: 8_000_000, latencyMode: 'quality' });
+
+  /* — 疊圖素材 — */
+  const titleC = renderTitleCanvas(1);
+  const titleY = POS_Y[S.titlePos] * OUT_H;
+  let logoImg = null;
+  const logoData = store.get('mp_logo', DEFAULT_LOGO);
+  if (logoData) {
+    logoImg = new Image();
+    await new Promise(res => { logoImg.onload = res; logoImg.onerror = () => { logoImg = null; res(); }; logoImg.src = logoData; });
+  }
+
+  /* — 畫布 — */
+  const main = document.createElement('canvas'); main.width = OUT_W; main.height = OUT_H;
+  const mx = main.getContext('2d', { willReadFrequently: false });
+  const blurC = document.createElement('canvas'); const bx = blurC.getContext('2d');
+
+  /* — 直接使用畫面上已載入的預覽影片抽格（另建元件在部分手機環境會載入失敗） — */
+  const v = vid;
+  v.pause(); stopPreview();
+  const seek = t => new Promise(res => {
+    const target = Math.min(Math.max(t, 0), S.dur - 0.001);
+    if (Math.abs(v.currentTime - target) < 0.0005) return res();
+    const to = setTimeout(() => { v.removeEventListener('seeked', h); res(); }, 2000); // 防呆：卡住就用當前畫面
+    const h = () => { clearTimeout(to); v.removeEventListener('seeked', h); res(); };
+    v.addEventListener('seeked', h);
+    v.currentTime = target;
+  });
+
+  // 來源畫面 cover 縮放參數
+  const sRatio = S.vw / S.vh, dRatio = OUT_W / OUT_H;
+  let sw, sh, sx0, sy0;
+  if (sRatio > dRatio) { sh = S.vh; sw = S.vh * dRatio; sx0 = (S.vw - sw) / 2; sy0 = 0; }
+  else { sw = S.vw; sh = S.vw / dRatio; sx0 = 0; sy0 = (S.vh - sh) / 2; }
+
+  /* — 逐格處理 — */
+  for (let n = 0; n < totalFrames; n++) {
+    if (encErr) throw encErr;
+    const tOut = n / OUT_FPS;
+    const p = segOfPlan(plan, tOut);
+    const tSrc = Math.min(p.in + Math.max(0, tOut - p.start) * p.speed, p.out - 0.001);
+    await seek(tSrc);
+
+    // 片段聚焦（放大裁切）
+    let winX = 0, winY = 0, winS = 1;
+    if (p.zoom && p.zoom.s > 1) {
+      winS = p.zoom.s;
+      const half = 0.5 / winS;
+      winX = Math.min(Math.max(p.zoom.cx, half), 1 - half) - half;
+      winY = Math.min(Math.max(p.zoom.cy, half), 1 - half) - half;
+    }
+    mx.filter = S.colorOn ? COLOR_FILTER : 'none';
+    mx.drawImage(v, sx0 + winX * sw, sy0 + winY * sh, sw / winS, sh / winS, 0, 0, OUT_W, OUT_H);
+    mx.filter = 'none';
+
+    // 模糊框（座標依聚焦轉換，並外擴 12% 容錯）
+    for (const b of S.blurs) {
+      let r = blurRectAt(b, tSrc);
+      if (!r) continue;
+      const mgx = r.w * 0.12, mgy = r.h * 0.12;
+      let nx = (r.x - mgx - winX) * winS, ny = (r.y - mgy - winY) * winS;
+      let nw = (r.w + mgx * 2) * winS, nh = (r.h + mgy * 2) * winS;
+      // 裁到畫面內
+      if (nx < 0) { nw += nx; nx = 0; }
+      if (ny < 0) { nh += ny; ny = 0; }
+      nw = Math.min(nw, 1 - nx); nh = Math.min(nh, 1 - ny);
+      if (nw <= 0.005 || nh <= 0.005) continue;
+      const rx = nx * OUT_W, ry = ny * OUT_H, rw = nw * OUT_W, rh = nh * OUT_H;
+      blurC.width = Math.max(2, Math.round(rw)); blurC.height = Math.max(2, Math.round(rh));
+      bx.filter = 'blur(4px)';
+      // 先縮小再放大 + blur，強化遮蔽
+      bx.drawImage(main, rx, ry, rw, rh, 0, 0, blurC.width / 6, blurC.height / 6);
+      bx.drawImage(blurC, 0, 0, blurC.width / 6, blurC.height / 6, 0, 0, blurC.width, blurC.height);
+      bx.filter = 'none';
+      mx.drawImage(blurC, rx, ry, rw, rh);
+    }
+
+    // 標題
+    if (titleC) mx.drawImage(titleC, (OUT_W - titleC.width) / 2, titleY - titleC.height / 2);
+    // Logo（右下角，寬 19%，往內縮 logo 尺寸的 50%）
+    if (logoImg) {
+      const lw = OUT_W * 0.19, lh2 = lw * logoImg.height / logoImg.width;
+      mx.drawImage(logoImg, OUT_W - lw - OUT_W * 0.015 - lw * 0.5, OUT_H - lh2 - OUT_H * 0.012 - lh2 * 0.5, lw, lh2);
+    }
+
+    const frame = new VideoFrame(main, { timestamp: Math.round(n / OUT_FPS * 1e6), duration: Math.round(1e6 / OUT_FPS) });
+    venc.encode(frame, { keyFrame: n % 90 === 0 });
+    frame.close();
+    if (venc.encodeQueueSize > 6) await new Promise(res => setTimeout(res, 30));
+    if (n % 5 === 0) progressCb(n / totalFrames * (aCodecId ? 0.9 : 0.98), `處理畫面 ${n}/${totalFrames}`);
+  }
+  await venc.flush(); venc.close();
+  if (encErr) throw encErr;
+
+  /* — 音訊組裝與編碼 — */
+  if (audioBuf && aCodecId) {
+    progressCb(0.92, '處理聲音…');
+    const srcRate = audioBuf.sampleRate;
+    const outSamples = Math.round(total * aRate);
+    const chans = [];
+    for (let c = 0; c < aCh; c++) chans.push(audioBuf.getChannelData(Math.min(c, audioBuf.numberOfChannels - 1)));
+    const out = new Float32Array(outSamples * aCh);   // interleaved
+    for (let m = 0; m < outSamples; m++) {
+      const tOut = m / aRate;
+      const tSrc = srcTimeAt(plan, tOut);
+      const pos = tSrc * srcRate;
+      const i0 = Math.floor(pos), f = pos - i0;
+      for (let c = 0; c < aCh; c++) {
+        const d = chans[c];
+        const s0 = d[Math.min(i0, d.length - 1)] || 0, s1 = d[Math.min(i0 + 1, d.length - 1)] || 0;
+        out[m * aCh + c] = s0 + (s1 - s0) * f;
+      }
+    }
+    let aErr = null;
+    const aenc = new AudioEncoder({
+      output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+      error: e => { aErr = e; },
+    });
+    aenc.configure({ codec: aCodec, sampleRate: aRate, numberOfChannels: aCh, bitrate: 128000 });
+    const CH = 1024 * 24;
+    for (let off = 0; off < outSamples; off += CH) {
+      const len = Math.min(CH, outSamples - off);
+      const ad = new AudioData({
+        format: 'f32', sampleRate: aRate, numberOfFrames: len, numberOfChannels: aCh,
+        timestamp: Math.round(off / aRate * 1e6),
+        data: out.subarray(off * aCh, (off + len) * aCh),
+      });
+      aenc.encode(ad); ad.close();
+    }
+    await aenc.flush(); aenc.close();
+    if (aErr) console.warn('音訊編碼錯誤，改為無聲輸出', aErr);
+  }
+
+  progressCb(0.99, '寫入檔案…');
+  muxer.finalize();
+  const blob = new Blob([muxer.target.buffer], { type: 'video/mp4' });
+  return { blob, hasAudio: !!aCodecId, vCodecId };
+}
+
+/* ---------- 輸出流程 ---------- */
+$('btnExport').onclick = async () => {
+  const btn = $('btnExport');
+  btn.disabled = true;
+  ['btnPlay', 'btnPrevSeg', 'scrub', 'btnRepick'].forEach(id => $(id).disabled = true);
+  $('prog').style.display = ''; $('doneCard').style.display = 'none';
+  vid.pause(); stopPreview();
+  try {
+    const t0 = performance.now();
+    const { blob, vCodecId } = await exportVideo((p, msg) => {
+      $('progIn').style.width = Math.round(p * 100) + '%';
+      $('progTxt').textContent = msg;
+    });
+    S.outBlob = blob;
+    S.outName = `${nameBase()}_後製.mp4`;
+    // 記住流水號
+    const key = S.category + '|' + S.content + '|' + S.date;
+    const map = store.get('mp_serial', {});
+    map[key] = Math.max(map[key] || 0, parseInt(S.serial, 10) || 0);
+    store.set('mp_serial', map);
+    $('progIn').style.width = '100%';
+    $('progTxt').textContent = `完成！耗時 ${((performance.now() - t0) / 1000).toFixed(0)} 秒，檔案 ${(blob.size / 1048576).toFixed(1)} MB` +
+      (vCodecId !== 'avc' ? '（注意：此瀏覽器不支援 H.264，輸出為 VP9 測試格式）' : '');
+    $('copyBox').textContent = buildCopyText();
+    $('doneCard').style.display = 'block';
+    $('doneCard').scrollIntoView({ behavior: 'smooth' });
+    const dl = store.get('mp_drive', ''); if (dl) $('lnkDrive').href = dl;
+  } catch (e) {
+    console.error(e);
+    $('progTxt').textContent = '輸出失敗：' + (e && e.message ? e.message : e);
+  }
+  btn.disabled = false;
+  ['btnPlay', 'btnPrevSeg', 'scrub', 'btnRepick'].forEach(id => $(id).disabled = false);
+};
+
+/* 下載影片：一定由使用者親手點擊觸發，避免瀏覽器擋自動下載 */
+$('btnSaveVid').onclick = () => {
+  if (!S.outBlob) return toast('請先輸出影片');
+  const url = URL.createObjectURL(S.outBlob);
+  const a = document.createElement('a');
+  a.href = url; a.download = S.outName;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 20000);
+  toast('已開始下載：' + S.outName);
+};
+
+$('btnCopy').onclick = async () => {
+  try { await navigator.clipboard.writeText(buildCopyText()); toast('文案已複製'); }
+  catch (e) {
+    const ta = document.createElement('textarea'); ta.value = buildCopyText();
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+    toast('文案已複製');
+  }
+};
+$('btnShare').onclick = async () => {
+  if (!S.outBlob) return;
+  const f = new File([S.outBlob], S.outName, { type: 'video/mp4' });
+  if (navigator.canShare && navigator.canShare({ files: [f] })) {
+    try { await navigator.share({ files: [f], text: buildCopyText() }); } catch (e) {}
+  } else toast('此瀏覽器不支援直接分享，請用已下載的檔案');
+};
+$('btnAgain').onclick = () => {
+  S.segments = []; S.blurs = []; S.selBlur = -1; S.curSeg = -1;
+  S.content = ''; S.title = ''; titleTouched = false; S._serialTouched = false;
+  S.outBlob = null;
+  $('inpContent').value = ''; $('inpTitle').value = '';
+  $('doneCard').style.display = 'none'; $('prog').style.display = 'none'; $('progTxt').textContent = '';
+  updateTitleOverlay();
+  gotoStep('cut');
+  $('filePick').value = ''; $('filePick').click();
+};
+
+/* ---------- 視窗尺寸變動時重算 overlay ---------- */
+window.addEventListener('resize', () => { updateBlurPositions(); updateTitleOverlay(); });
+
+/* ---------- 初始化 ---------- */
+loadLogoUI();
+renderTitleUI();
+
+/* ---------- 測試掛勾（自動化驗證用，不影響一般使用） ---------- */
+window.__test = {
+  S, loadVideo, exportVideo, buildPlan, renderTitleCanvas, store,
+  async run(file, opts = {}) {
+    await loadVideo(file);
+    Object.assign(S, opts.state || {});
+    if (opts.segments) S.segments = opts.segments;
+    if (opts.blurs) S.blurs = opts.blurs;
+    const r = await exportVideo((p, m) => { window.__test.progress = { p, m }; });
+    window.__test.result = { size: r.blob.size, hasAudio: r.hasAudio, vCodecId: r.vCodecId };
+    window.__test.blob = r.blob;
+    return window.__test.result;
+  },
+};
+
+</script>
+</body>
+</html>

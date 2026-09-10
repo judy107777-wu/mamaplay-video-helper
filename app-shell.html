@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#F08A24">
+<title>媽媽Play 影片小幫手</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --orange:#F08A24; --orange-dark:#D97415; --orange-bg:rgba(240,138,36,.12);
+  --ink:#333; --muted:#8a8a8a; --line:#e8e2da; --bg:#faf7f3; --card:#fff;
+  --radius:14px;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+  font-family:"Noto Sans TC",system-ui,-apple-system,sans-serif;
+  overscroll-behavior:none;height:100%;}
+body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;
+  padding-bottom:env(safe-area-inset-bottom);}
+button{font-family:inherit;}
+
+/* ── 頂欄 ── */
+header{flex:none;display:flex;align-items:center;gap:8px;padding:6px 14px 2px;}
+header h1{font-size:15px;margin:0;font-weight:900;color:var(--orange-dark);flex:1;}
+#btnSettings{border:none;background:none;font-size:20px;padding:2px 6px;color:var(--muted);}
+
+/* ── 凍結的上半部：步驟直列＋影片＋時間軸＋操作鈕 ── */
+#topArea{flex:none;background:var(--bg);border-bottom:2px solid var(--line);
+  box-shadow:0 4px 10px -6px rgba(0,0,0,.12);padding:0 10px 6px;}
+#topRow{display:flex;gap:8px;align-items:stretch;}
+#steps{display:flex;flex-direction:column;gap:6px;width:84px;flex:none;justify-content:center;}
+.step{text-align:center;font-size:13px;font-weight:700;color:var(--muted);
+  padding:10px 0;border-radius:12px;background:#efe9e2;border:none;}
+.step.on{background:var(--orange);color:#fff;}
+.step:disabled{opacity:.45;}
+#stageArea{flex:1;display:flex;justify-content:flex-end;padding-right:4px;}
+#stage{position:relative;background:#000;overflow:hidden;
+  height:min(31vh,250px);aspect-ratio:9/16;border-radius:10px;}
+#zoomWrap{position:absolute;inset:0;will-change:transform;transform-origin:0 0;}
+#vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;}
+#titleOverlay{position:absolute;left:50%;transform:translate(-50%,-50%);
+  pointer-events:none;max-width:92%;}
+#titleOverlay img{width:100%;display:block;}
+#logoOverlay{position:absolute;right:11%;bottom:3.2%;width:19%;pointer-events:none;}
+.blurBox{position:absolute;border:2px dashed rgba(255,255,255,.9);border-radius:8px;
+  backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
+  background:rgba(255,255,255,.06);touch-action:none;}
+.blurBox.sel{border-color:var(--orange);border-style:solid;}
+.blurBox .hd{position:absolute;right:-11px;bottom:-11px;width:26px;height:26px;border-radius:50%;
+  background:var(--orange);border:2px solid #fff;touch-action:none;}
+.blurBox .tag{position:absolute;left:0;top:-20px;font-size:11px;color:#fff;
+  background:rgba(0,0,0,.5);padding:1px 6px;border-radius:6px;white-space:nowrap;}
+#emptyStage{position:absolute;inset:0;display:flex;flex-direction:column;gap:10px;
+  align-items:center;justify-content:center;color:#bbb;font-size:14px;}
+
+/* ── 面板（獨立捲動） ── */
+#panel{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 14px 40px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:12px;margin-bottom:10px;}
+.card h3{margin:0 0 8px;font-size:14px;color:var(--orange-dark);font-weight:900;}
+.hint{font-size:12px;color:var(--muted);margin:4px 0 0;}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+
+.btn{border:none;border-radius:12px;padding:11px 16px;font-size:15px;font-weight:700;
+  background:#efe9e2;color:var(--ink);}
+.btn.pri{background:var(--orange);color:#fff;}
+.btn.big{width:100%;padding:15px;font-size:17px;}
+.btn.warn{background:#fbe9e7;color:#c62828;}
+.btn.sm{padding:7px 12px;font-size:13px;border-radius:10px;}
+.btn:disabled{opacity:.4;}
+
+.chip{border:1.5px solid var(--line);background:#fff;border-radius:999px;
+  padding:7px 14px;font-size:14px;font-weight:700;color:var(--ink);}
+.chip.on{background:var(--orange);border-color:var(--orange);color:#fff;}
+
+input[type=text],textarea{width:100%;border:1.5px solid var(--line);border-radius:10px;
+  padding:10px;font-size:15px;font-family:inherit;background:#fff;color:var(--ink);}
+textarea{resize:vertical;}
+input:focus,textarea:focus{outline:2px solid var(--orange);border-color:transparent;}
+
+/* 時間軸 */
+#tlCard{margin-top:6px;}
+#thumbs{display:flex;height:28px;border-radius:6px;overflow:hidden;background:#222;}
+#thumbs img{height:100%;flex:1;object-fit:cover;min-width:0;}
+#tlWrap{position:relative;margin-top:4px;}
+#segBar{position:relative;height:12px;background:#eee2d4;border-radius:6px;overflow:hidden;}
+.segSpan{position:absolute;top:0;bottom:0;background:var(--orange);opacity:.85;}
+.segSpan.cur{outline:2px solid var(--orange-dark);}
+#scrub{width:100%;margin:2px 0 0;accent-color:var(--orange-dark);}
+#tcur{font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;color:var(--orange-dark);}
+
+.segRow{display:flex;align-items:center;gap:6px;padding:8px 0;border-top:1px dashed var(--line);
+  flex-wrap:wrap;}
+.segRow:first-child{border-top:none;}
+.segRow .tm{font-variant-numeric:tabular-nums;font-size:13.5px;font-weight:700;min-width:96px;}
+.segRow.cur .tm{color:var(--orange-dark);}
+.spd{display:flex;gap:4px;}
+.spd .chip{padding:5px 9px;font-size:12.5px;}
+.x{border:none;background:none;color:#c62828;font-size:18px;padding:2px 6px;margin-left:auto;}
+
+/* 進度 */
+#prog{height:14px;border-radius:7px;background:#eee2d4;overflow:hidden;display:none;}
+#progIn{height:100%;width:0%;background:var(--orange);transition:width .2s;}
+#progTxt{font-size:13px;color:var(--muted);margin-top:6px;text-align:center;}
+
+/* 完成畫面 */
+#doneCard{display:none;}
+#copyBox{white-space:pre-wrap;font-size:14px;background:#fff;border:1.5px solid var(--line);
+  border-radius:10px;padding:10px;max-height:170px;overflow:auto;}
+.linkGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
+
+/* 彈窗 */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;display:none;
+  align-items:flex-end;justify-content:center;}
+.modal.show{display:flex;}
+.sheet{background:var(--bg);width:100%;max-width:520px;border-radius:18px 18px 0 0;
+  padding:16px 16px calc(20px + env(safe-area-inset-bottom));max-height:82vh;overflow:auto;}
+.sheet h2{margin:0 0 10px;font-size:16px;color:var(--orange-dark);}
+.mgRow{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line);}
+.mgRow span{flex:1;font-size:15px;}
+
+.toast{position:fixed;left:50%;bottom:80px;transform:translateX(-50%);z-index:60;
+  background:rgba(40,40,40,.92);color:#fff;font-size:14px;padding:9px 18px;border-radius:999px;
+  opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+.screen{display:none;}
+.screen.on{display:block;}
+</style>
+</head>
+<body>
+<header>
+  <h1>媽媽Play 影片小幫手</h1>
+  <button id="btnSettings" aria-label="設定">⚙</button>
+</header>
+
+<div id="topArea">
+  <div id="topRow">
+    <div id="steps">
+      <button class="step on" data-s="cut">1 剪輯</button>
+      <button class="step" data-s="title" disabled>2 標題</button>
+      <button class="step" data-s="out" disabled>3 輸出</button>
+    </div>
+    <div id="stageArea">
+      <div id="stage">
+        <div id="zoomWrap">
+          <video id="vid" playsinline muted preload="auto"></video>
+          <div id="blurLayer"></div>
+        </div>
+        <div id="titleOverlay"><img id="titleImg" alt=""></div>
+        <img id="logoOverlay" alt="" style="display:none">
+        <div id="emptyStage">
+          <div style="font-size:34px">🎬</div>
+          <div>尚未選擇影片</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tlCard" style="display:none">
+    <div id="thumbs"></div>
+    <div id="tlWrap">
+      <div id="segBar"></div>
+      <input type="range" id="scrub" min="0" max="100" step="0.05" value="0">
+    </div>
+    <div class="row" style="justify-content:space-between;flex-wrap:nowrap;gap:4px;margin-top:2px">
+      <button class="btn sm" id="btnRepick" style="white-space:nowrap;line-height:1.2">↻ 更換<br><small style="font-weight:400">9:16最佳</small></button>
+      <span id="tcur">0.0s</span>
+      <button class="btn sm" id="btnPlay" style="white-space:nowrap">▶ 播放</button>
+      <button class="btn sm" id="btnPrevSeg" style="white-space:nowrap">▶ 預覽</button>
+    </div>
+  </div>
+</div>
+
+<div id="panel">
+
+<!-- ═══ 畫面 1：剪輯 ═══ -->
+<section class="screen on" id="sc-cut">
+  <div class="card" id="pickCard">
+    <button class="btn pri big" id="btnPick">＋ 選擇影片</button>
+    <input type="file" id="filePick" accept="video/*" hidden>
+    <p class="hint">9:16 直式最佳</p>
+  </div>
+
+  <div class="card" id="segCard" style="display:none">
+    <h3>保留片段（可跳選多段，依序接成一支）</h3>
+    <div id="segList"></div>
+    <div class="row" style="margin-top:8px;flex-wrap:nowrap;gap:6px">
+      <button class="btn pri" id="btnAddSeg" style="flex:1.1;white-space:nowrap;padding:11px 4px;font-size:14px">＋新增片段</button>
+      <button class="btn" id="btnSetIn" style="flex:1;white-space:nowrap;padding:11px 4px;font-size:14px">［設起點</button>
+      <button class="btn" id="btnSetOut" style="flex:1;white-space:nowrap;padding:11px 4px;font-size:14px">設終點］</button>
+    </div>
+    <p class="hint">先拖時間軸到想要的位置，再按「設起點／設終點」。每段可各選加速倍率。</p>
+  </div>
+
+  <div class="card" id="fxCard" style="display:none">
+    <h3>色彩與姓名遮蔽</h3>
+    <div class="row">
+      <button class="chip on" id="chipColor">☀ 明亮微暖（建議）</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn" id="btnAddBlur">＋ 新增模糊框</button>
+      <button class="btn sm" id="btnBlurFrom" disabled>從此刻開始</button>
+      <button class="btn sm" id="btnBlurTo" disabled>到此刻結束</button>
+      <button class="btn sm warn" id="btnDelBlur" disabled>刪除框</button>
+    </div>
+    <div class="row" style="margin-top:8px;flex-wrap:nowrap;gap:4px" id="fineRow" hidden>
+      <button class="btn sm" id="btnZoomEdit" style="white-space:nowrap;padding:7px 8px">🔍 放大</button>
+      <button class="btn sm nud" data-n="l" style="padding:7px 9px">◀</button>
+      <button class="btn sm nud" data-n="u" style="padding:7px 9px">▲</button>
+      <button class="btn sm nud" data-n="d" style="padding:7px 9px">▼</button>
+      <button class="btn sm nud" data-n="r" style="padding:7px 9px">▶</button>
+      <button class="btn sm nud" data-n="big" style="padding:7px 9px">＋</button>
+      <button class="btn sm nud" data-n="small" style="padding:7px 9px">－</button>
+    </div>
+    <p class="hint">出現姓名時：暫停 → 新增模糊框 → 拖到姓名上（可按「區域放大」放大畫面微調，箭頭鈕可微移、＋－調大小）。追蹤訣竅：姓名移動的每個轉折點都停格，把框拖到新位置，中間會自動接順。</p>
+  </div>
+
+  <div class="card" id="nextCutCard" style="display:none">
+    <button class="btn pri big" id="btnToTitle">下一步：標題 →</button>
+  </div>
+</section>
+
+<!-- ═══ 畫面 2：標題 ═══ -->
+<section class="screen" id="sc-title">
+  <div class="card">
+    <h3>活動分類</h3>
+    <div class="row" id="catChips"></div>
+  </div>
+  <div class="card">
+    <h3>分類標語（標題下方的藍綠色小框）</h3>
+    <div class="row" id="pillChips"></div>
+    <input type="text" id="inpPill" placeholder="小框文字，可自行修改" style="margin-top:6px">
+  </div>
+  <div class="card">
+    <h3>活動內容</h3>
+    <input type="text" id="inpContent" placeholder="例：咖哩蛋包飯">
+    <div class="row" id="recentContents" style="margin-top:6px"></div>
+  </div>
+  <div class="card">
+    <h3>主標題（橘框，1–2 行，可加表情符號）</h3>
+    <textarea id="inpTitle" rows="2" placeholder="會自動帶入活動內容，可自由修改、加一行引言"></textarea>
+    <div class="row" id="recentTitles" style="margin-top:6px"></div>
+  </div>
+  <div class="card">
+    <h3>標題位置</h3>
+    <div class="row">
+      <button class="chip on" data-pos="top">上 1/3</button>
+      <button class="chip" data-pos="mid">置中</button>
+      <button class="chip" data-pos="bot">下 1/3</button>
+    </div>
+  </div>
+  <div class="card">
+    <button class="btn pri big" id="btnToOut">下一步：輸出 →</button>
+  </div>
+</section>
+
+<!-- ═══ 畫面 3：輸出 ═══ -->
+<section class="screen" id="sc-out">
+  <div class="card" id="nameCard">
+    <h3>檔名</h3>
+    <div class="row">
+      <label style="font-size:13px">日期
+        <input type="text" id="inpDate" style="width:110px" inputmode="numeric"></label>
+      <label style="font-size:13px">流水號
+        <input type="text" id="inpSerial" style="width:64px" inputmode="numeric"></label>
+    </div>
+    <p class="hint" id="fnPreview"></p>
+  </div>
+  <div class="card" id="goCard">
+    <button class="btn pri big" id="btnExport">🎬 開始輸出影片</button>
+    <div id="prog" style="margin-top:10px"><div id="progIn"></div></div>
+    <p id="progTxt"></p>
+  </div>
+  <div class="card" id="doneCard">
+    <h3>✅ 影片處理完成</h3>
+    <button class="btn pri big" id="btnSaveVid">⬇ 下載影片到手機</button>
+    <p class="hint">按下後到通知列或「下載」資料夾確認；沒看到檔案就再按一次。</p>
+    <div id="copyBox" style="margin-top:8px"></div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn pri" id="btnCopy">📋 複製文案</button>
+      <button class="btn pri" id="btnShare">📤 分享影片（選 FB / IG）</button>
+    </div>
+    <div class="linkGrid">
+      <a class="btn" style="text-align:center;text-decoration:none" href="https://www.facebook.com" target="_blank">開啟 FB</a>
+      <a class="btn" style="text-align:center;text-decoration:none" href="https://www.instagram.com" target="_blank">開啟 IG</a>
+      <a class="btn" style="text-align:center;text-decoration:none" href="https://photos.google.com" target="_blank">開啟 Google 相簿</a>
+      <a class="btn" style="text-align:center;text-decoration:none" id="lnkDrive" href="https://drive.google.com" target="_blank">開啟 Drive 資料夾</a>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn big" id="btnAgain">✨ 做下一支影片</button>
+    </div>
+  </div>
+</section>
+</div>
+
+<!-- ═══ 設定 ═══ -->
+<div class="modal" id="mSettings">
+  <div class="sheet">
+    <h2>設定</h2>
+    <div class="card">
+      <h3>活動分類清單</h3>
+      <div id="catManage"></div>
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="inpNewCat" placeholder="新增分類名稱" style="flex:1">
+        <button class="btn sm pri" id="btnAddCat">新增</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>各分類的標語清單（一行一句，第一句為預設）</h3>
+      <div id="pillManage"></div>
+    </div>
+    <div class="card">
+      <h3>Hashtag 文案模板（{活動名稱} 會自動代入）</h3>
+      <textarea id="inpTags" rows="4"></textarea>
+    </div>
+    <div class="card">
+      <h3>Logo 浮水印（去背 PNG）</h3>
+      <div class="row">
+        <button class="btn sm" id="btnLogoPick">選擇 Logo 圖檔</button>
+        <input type="file" id="logoPick" accept="image/png,image/webp" hidden>
+        <img id="logoPrev" style="height:36px;display:none">
+        <button class="btn sm warn" id="btnLogoDel" style="display:none">移除</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Google Drive 完成影片資料夾連結</h3>
+      <input type="text" id="inpDrive" placeholder="貼上資料夾網址">
+    </div>
+    <div class="row" style="margin-top:4px">
+      <button class="btn pri big" id="btnCloseSettings">儲存並關閉</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/*__MP4MUXER__*/
+</script>
+<script>
+"use strict";
+/*__APP_JS__*/
+</script>
+</body>
+</html>

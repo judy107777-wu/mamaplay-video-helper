@@ -1,0 +1,12 @@
+node_modules/
+test-output/
+
+# 影片素材含學員畫面，repo 為公開，一律不上傳
+*.mp4
+*.mov
+*.webm
+_原始素材/
+媽媽play活動側錄剪輯範本/
+
+# 本機離線版（與 docs/index.html 內容相同，由 build.js 產出）
+媽媽Play影片小幫手.html

@@ -1,0 +1,13 @@
+{
+  "name": "mamaplay-video-helper",
+  "version": "1.0.0",
+  "private": true,
+  "description": "媽媽Play 影片小幫手：手機課堂側錄快速剪輯（單檔網頁 App）",
+  "scripts": {
+    "build": "node build.js",
+    "test": "node build.js && node e2e.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.55.0"
+  }
+}
