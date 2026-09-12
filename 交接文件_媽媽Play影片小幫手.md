@@ -107,7 +107,10 @@ e2e 涵蓋：兩段跳選＋2x＋聚焦 1.5x＋移動模糊框＋新標題樣式
 **立即（第一階段收尾）**
 - [ ] 最新版在真機完整驗證（下載按鈕、Web Share 分享到 FB/IG、H.264 輸出品質）
 - [ ] 分類標語 10 選 5 定案後更新 `DEFAULT_PILLS`（候選清單見對話記錄；親子烘焙第 1 句與包場第 1 句「賓主盡歡的歡樂派對」已確定要）
-- [ ] **上線到固定網址**（GitHub Pages / Cloudflare Pages 免費即可）：解決三件事——更新不用傳檔、localStorage 正常保存、可「加入主畫面」像 App。這是目前所有檔案傳輸痛點的根治方案，建議最優先。
+- [x] **上線到固定網址**（2026-09-12 完成）：https://judy107777-wu.github.io/mamaplay-video-helper/
+  - Repo：https://github.com/judy107777-wu/mamaplay-video-helper （公開；GitHub Pages 由 `main` 分支 `/docs` 發布）
+  - 更新流程：改 `app.js`／`app-shell.html` → `npm test` → commit → `git push`，約 1 分鐘後線上生效
+  - 已驗證線上版：secure context、WebCodecs H.264 可用、localStorage 可保存
 
 **第二階段**
 - [ ] Google Drive OAuth：原始檔上傳「原始側錄」資料夾、成品上傳「完成影片」資料夾；流水號改查 Drive 實際檔案
@@ -125,6 +128,6 @@ e2e 涵蓋：兩段跳選＋2x＋聚焦 1.5x＋移動模糊框＋新標題樣式
 
 ## 9. 給 Claude Code 的起手建議
 
-1. 解壓 zip，`node build.js` 重現單檔成品，先跑 `node e2e.js` 確認環境
-2. 第一件事做「上線到固定網址」（§7），之後所有迭代直接推上去，不再有檔案傳輸問題
+1. `npm install` 後跑 `npm test` 確認環境
+2. 已上線固定網址（§7），之後所有迭代直接 push，不再有檔案傳輸問題
 3. 保留 §5 的所有防呆行為；改動標題/模糊/聚焦邏輯時，用 `window.__test` 掛勾寫回歸測試
